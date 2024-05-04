@@ -1,10 +1,7 @@
-from flask import Flask, request, jsonify # type: ignore
+import os
 import cv2
-import os
-import numpy as np
 import mediapipe as mp
-import sys
-import os
+import numpy as np
 
 # Function to preprocess images
 def preprocess_image(image):
@@ -26,10 +23,12 @@ def preprocess_image(image):
     return uint8_image
 
 # Function to extract keypoints and calculate angles from poses
-def extract_angles(image_np):
+def extract_angles(image_path):
     mp_pose = mp.solutions.pose
 
-    preprocessed_image = preprocess_image(image_np)
+    # Load and preprocess image
+    image = cv2.imread(image_path)
+    preprocessed_image = preprocess_image(image)
 
     with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
         # Convert the BGR image to RGB before processing
@@ -119,75 +118,3 @@ def extract_angles(image_np):
                     angle_left_hip, angle_right_hip, angle_left_hip_knee, angle_right_hip_knee]
         else:
             return None
-
-app = Flask(__name__)
-
-def video_to_frames(video_path, output_dir, frame_skip):
-    # Create output directory if it doesn't exist
-    os.makedirs(output_dir, exist_ok=True)
-    
-    print(video_path);
-    # Open the video file
-    cap = cv2.VideoCapture(video_path)
-    frame_count = 0
-    
-    # Read frames from the video
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
-        
-        # Save the frame as an image file
-        if frame_count % frame_skip == 0:
-            frame_path = os.path.join(output_dir, f'frame_{frame_count}.jpg')
-            cv2.imwrite(frame_path, frame)
-        
-            print(frame_count);
-        frame_count += 1
-    
-    # Release the VideoCapture
-    cap.release()
-
-@app.route('/process_video', methods=['POST'])
-def process_video():
-    data = request.json
-    print(data);
-    video_path = data['videoPath']
-    output_dir = data['outputDir']
-    frame_skip = data['frameSkip']
-
-    video_path = f'D:\SLIIT\Academic\YEAR 04\Research\PP1\Research-Demo-Personal\Backend\server\{video_path}'
-
-    video_to_frames(video_path, output_dir, frame_skip)
-
-    return jsonify({'message': 'Video processing completed'})
-
-@app.route('/process_image', methods=['POST'])
-def extract_angles_endpoint():
-    # Check if an image file is present in the request
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image provided'}), 400
-
-    # Read the image file from the request
-    image_file = request.files['image']
-
-    # Check if the file is empty
-    if image_file.filename == '':
-        return jsonify({'error': 'Empty file provided'}), 400
-
-    # Read the image as a numpy array
-    image_bytes = image_file.read()
-    nparr = np.frombuffer(image_bytes, np.uint8)
-    image_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-    # Extract angles from the image
-    angles = extract_angles(image_np)
-
-    if angles is not None:
-        # Return the extracted angles as a JSON response
-        return jsonify({'angles': angles}), 200
-    else:
-        return jsonify({'error': 'No poses detected in the image'}), 400
-
-if __name__ == '__main__':
-    app.run(debug=True)  # Run the Flask app

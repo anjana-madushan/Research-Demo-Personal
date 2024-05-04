@@ -1,12 +1,12 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import VideoUpload from './components/Video/videoUpload';
+import Home from './pages/Home';
 
 function App() {
 
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<VideoUpload />} />
+        <Route path="/" element={<Home />} />
       </Routes>
     </BrowserRouter>
   )

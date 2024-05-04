@@ -1,6 +1,4 @@
 import multer from 'multer';
-import fs from 'fs';
-import path from 'path';
 import { Router } from "express";
 import axios from 'axios';
 const router = Router();
@@ -21,7 +19,6 @@ const upload = multer({ storage: storage });
 // Define endpoint for file upload
 router.post('/upload', upload.single('file'), async (req, res) => {
   try {
-    console.log('hello!');
     if (!req.file) {
       return res.status(400).send('No file uploaded.');
     }

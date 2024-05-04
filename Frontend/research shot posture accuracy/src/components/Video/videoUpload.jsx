@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button, Typography, Radio, FormControlLabel, Box } from "@mui/material";
 import axios from "axios";
 import { styled } from "@mui/material";
@@ -13,12 +13,22 @@ const VideoUpload = () => {
   const [batsmanType, setBatsmanType] = useState('');
   const [fileName, setFileName] = useState('');
   const [videoDuration, setVideoDuration] = useState(null);
+  const [durationExceeded, setDurationExceeded] = useState(false);
+  // const [frames, setFrames] = useState([]);
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.play();
+      videoRef.current.playbackRate = 0.5;
+    }
+  }, [videoRef]);
 
   const handleFileChange = (event) => {
     const selectedFile = event.target.files[0];
     setFile(selectedFile);
-    console.log(selectedFile);
     setFileName(selectedFile ? selectedFile.name : '');
+
     // Create a URL for the selected file
     const fileURL = URL.createObjectURL(selectedFile);
 
@@ -36,13 +46,16 @@ const VideoUpload = () => {
 
       // Check if duration exceeds 10 seconds
       if (durationInSeconds > 10) {
-        setMessage('Duration of the video is higher than 10 seconds.');
+        setDurationExceeded(true);
       } else {
-        setMessage('');
+        setDurationExceeded(false);
       }
 
       // Release the object URL
       URL.revokeObjectURL(fileURL);
+
+      // Extract frames from the video
+      // extractFrames(videoElement);
     };
   };
 
@@ -50,29 +63,44 @@ const VideoUpload = () => {
     setBatsmanType(event.target.value);
   };
 
-  const handleSubmit = async () => {
-    if (!file) {
-      setMessage("Please select a file.");
-      return;
-    }
+  // const extractFrames = (video) => {
+  //   const frameRate = 30; // Adjust as needed
+  //   const numFrames = Math.floor(video.duration * frameRate);
 
-    if (batsmanType === '') {
-      setMessage('Please select the batsman type');
-      return;
-    }
+  //   const canvas = document.createElement('canvas');
+  //   const context = canvas.getContext('2d');
 
-    // Check if duration exceeds 10 seconds
-    if (videoDuration && videoDuration > 10) {
-      setMessage('Duration of the video is higher than 10 seconds.');
-      return;
-    }
+  //   const extractedFrames = [];
+  //   for (let i = 0; i < numFrames; i++) {
+  //     video.currentTime = i / frameRate;
+  //     video.pause(); // Pause the video to ensure accurate frame extraction
+  //     canvas.width = video.videoWidth;
+  //     canvas.height = video.videoHeight;
+  //     context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  //     const frameDataUrl = canvas.toDataURL('image/png');
+  //     extractedFrames.push(frameDataUrl);
+  //   }
+  //   setFrames(extractedFrames);
+  // };
 
+  const captureFrame = async () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+    const frameDataUrl = canvas.toDataURL('image/png');
+    // Send the frameDataUrl to the backend
+    console.log("Frame captured:", frameDataUrl);
+    const blob = await fetch(frameDataUrl).then((res) => res.blob());
+
+    // Create a FormData object
     const formData = new FormData();
-    formData.append("file", file);
-
+    formData.append("image", blob, "frame.png");
+    console.log(formData);
     try {
       const response = await axios.post(
-        "http://localhost:8070/api/upload",
+        "http://localhost:8070/api/upload/image",
         formData,
         {
           headers: {
@@ -82,19 +110,57 @@ const VideoUpload = () => {
       );
       setMessage(response.data);
     } catch (error) {
+      console.log(error)
       setMessage("Error uploading file.");
     }
   };
+
+  // const handleSelectFrame = (frameIndex) => {
+  //   const selectedFrame = frames[frameIndex];
+  //   // Send the selectedFrame to the backend
+  //   console.log("Selected frame:", selectedFrame);
+  //   // Here you can make an axios request to send the selectedFrame to the backend
+  // };
+
+  // const handleSubmit = async () => {
+  //   if (!file) {
+  //     setMessage("Please select a file.");
+  //     return;
+  //   }
+
+  //   if (batsmanType === '') {
+  //     setMessage('Please select the batsman type');
+  //     return;
+  //   }
+
+  //   if (durationExceeded) {
+  //     setMessage('Duration of the video is higher');
+  //     return;
+  //   }
+
+  //   const formData = new FormData();
+  //   formData.append("file", file);
+
+  //   try {
+  //     const response = await axios.post(
+  //       "http://localhost:8070/api/upload/",
+  //       formData,
+  //       {
+  //         headers: {
+  //           "Content-Type": "multipart/form-data",
+  //         },
+  //       }
+  //     );
+  //     setMessage(response.data);
+  //   } catch (error) {
+  //     setMessage("Error uploading file.");
+  //   }
+  // };
 
   return (
     <>
       <Box
         sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          mt: 20,
-          height: "100vh",
           overflowY: "hidden", // Remove vertical scroll bar
         }}
       >
@@ -128,10 +194,27 @@ const VideoUpload = () => {
             onChange={handleOptionChange}
           />
         </Box>
-        <UploadButton variant="contained" onClick={handleSubmit}>
+        {videoDuration && <Typography>Video Duration: {videoDuration} seconds</Typography>}
+        {durationExceeded && <Typography>Duration of the video exceeds 10 seconds.</Typography>}
+        {/* <UploadButton variant="contained" onClick={handleSubmit}>
           Upload
-        </UploadButton>
+        </UploadButton> */}
         {message && <Typography>{message}</Typography>}
+        {/* Display video element */}
+        {file && <video ref={videoRef} src={URL.createObjectURL(file)} controls autoPlay width="400" height="300" />}
+        {/* Button to capture frame */}
+        <Button variant="contained" onClick={captureFrame}>Capture Frame</Button>
+        {/* Display extracted frames */}
+        {/* {frames.length > 0 && (
+          <div>
+            {frames.map((frame, index) => (
+              <div key={index}>
+                <img src={frame} alt={`Frame ${index}`} />
+                <Button variant="contained" onClick={() => handleSelectFrame(index)}>Select Frame</Button>
+              </div>
+            ))}
+          </div>
+        )} */}
       </Box>
     </>
   );

@@ -3,8 +3,19 @@ import cv2
 import os
 import numpy as np
 import mediapipe as mp
+import pandas as pd
 import sys
 import os
+import joblib
+
+app = Flask(__name__)
+
+clf = joblib.load(r'd:\SLIIT\Academic\YEAR 04\Research\ModelTraining\models\random_forest_classification.pkl')
+print(clf)
+
+# Load the MinMaxScaler
+scaler = joblib.load(r'D:\SLIIT\Academic\YEAR 04\Research\ModelTraining\scalers\min_max_scaler.pkl')
+print(scaler)
 
 # Function to preprocess images
 def preprocess_image(image):
@@ -120,47 +131,45 @@ def extract_angles(image_np):
         else:
             return None
 
-app = Flask(__name__)
-
-def video_to_frames(video_path, output_dir, frame_skip):
-    # Create output directory if it doesn't exist
-    os.makedirs(output_dir, exist_ok=True)
+# def video_to_frames(video_path, output_dir, frame_skip):
+#     # Create output directory if it doesn't exist
+#     os.makedirs(output_dir, exist_ok=True)
     
-    print(video_path);
-    # Open the video file
-    cap = cv2.VideoCapture(video_path)
-    frame_count = 0
+#     print(video_path);
+#     # Open the video file
+#     cap = cv2.VideoCapture(video_path)
+#     frame_count = 0
     
-    # Read frames from the video
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
+#     # Read frames from the video
+#     while cap.isOpened():
+#         ret, frame = cap.read()
+#         if not ret:
+#             break
         
-        # Save the frame as an image file
-        if frame_count % frame_skip == 0:
-            frame_path = os.path.join(output_dir, f'frame_{frame_count}.jpg')
-            cv2.imwrite(frame_path, frame)
+#         # Save the frame as an image file
+#         if frame_count % frame_skip == 0:
+#             frame_path = os.path.join(output_dir, f'frame_{frame_count}.jpg')
+#             cv2.imwrite(frame_path, frame)
         
-            print(frame_count);
-        frame_count += 1
+#             print(frame_count);
+#         frame_count += 1
     
-    # Release the VideoCapture
-    cap.release()
+#     # Release the VideoCapture
+#     cap.release()
 
-@app.route('/process_video', methods=['POST'])
-def process_video():
-    data = request.json
-    print(data);
-    video_path = data['videoPath']
-    output_dir = data['outputDir']
-    frame_skip = data['frameSkip']
+# @app.route('/process_video', methods=['POST'])
+# def process_video():
+#     data = request.json
+#     print(data);
+#     video_path = data['videoPath']
+#     output_dir = data['outputDir']
+#     frame_skip = data['frameSkip']
 
-    video_path = f'D:\SLIIT\Academic\YEAR 04\Research\PP1\Research-Demo-Personal\Backend\server\{video_path}'
+#     video_path = f'D:\SLIIT\Academic\YEAR 04\Research\PP1\Research-Demo-Personal\Backend\server\{video_path}'
 
-    video_to_frames(video_path, output_dir, frame_skip)
+#     video_to_frames(video_path, output_dir, frame_skip)
 
-    return jsonify({'message': 'Video processing completed'})
+#     return jsonify({'message': 'Video processing completed'})
 
 @app.route('/process_image', methods=['POST'])
 def extract_angles_endpoint():
@@ -189,5 +198,22 @@ def extract_angles_endpoint():
     else:
         return jsonify({'error': 'No poses detected in the image'}), 400
 
-if __name__ == '__main__':
+@app.route('/predict', methods=['POST'])
+def predict():
+    # Receive features from the request
+    features = request.json['features']
+
+    # Extract angle values from the features
+    angle_values = [angle[1] for angle in features]
+
+    # Preprocess the features
+    features_normalized = scaler.transform([angle_values])
+
+    # Predict using the classifier
+    predicted_labels = clf.predict(features_normalized)
+
+    # Return the predicted labels
+    return jsonify({'Performed a shot is': predicted_labels[0]})
+
+if __name__ == '__main__': 
     app.run(debug=True)  # Run the Flask app

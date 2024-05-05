@@ -1,42 +1,9 @@
-from flask import Flask, request, jsonify # type: ignore
-import cv2
-import os
 import numpy as np
 import mediapipe as mp
-import pandas as pd
-import sys
-import os
-import joblib
+import cv2
+from utils.shank_calculations.shankAngleProcess import shankAngleCalculationProcess
+from utils.preprocessing import preprocess_image
 
-app = Flask(__name__)
-
-clf = joblib.load(r'd:\SLIIT\Academic\YEAR 04\Research\ModelTraining\models\random_forest_classification.pkl')
-print(clf)
-
-# Load the MinMaxScaler
-scaler = joblib.load(r'D:\SLIIT\Academic\YEAR 04\Research\ModelTraining\scalers\min_max_scaler.pkl')
-print(scaler)
-
-# Function to preprocess images
-def preprocess_image(image):
-    # Apply Gaussian Blur to remove blur
-    blurred_image = cv2.GaussianBlur(image, (5, 5), 0)
-    
-    # Apply Median Blur to remove salt-and-pepper noise
-    median_blurred_image = cv2.medianBlur(blurred_image, 5)
-    
-    # Perform resizing and cropping if necessary
-    resized_image = cv2.resize(median_blurred_image, (224, 224))
-    
-    # Normalize pixel values to range [0, 1]
-    normalized_image = resized_image / 255.0
-    
-    # Convert image to 8-bit unsigned integer depth
-    uint8_image = (normalized_image * 255).astype(np.uint8)
-    
-    return uint8_image
-
-# Function to extract keypoints and calculate angles from poses
 def extract_angles(image_np):
     mp_pose = mp.solutions.pose
 
@@ -48,6 +15,20 @@ def extract_angles(image_np):
         
         # Process preprocessed image
         results = pose.process(image_rgb)
+
+        angle_names = [
+        "angle_left_elbow",
+        "angle_right_elbow",
+        "angle_left_shoulder",
+        "angle_right_shoulder",
+        "angle_left_knee",
+        "angle_right_knee",
+        "angle_left_hip",
+        "angle_right_hip",
+        "angle_left_hip_knee",
+        "angle_right_hip_knee",
+        "right_shank_angle"
+        ]
 
         if results.pose_landmarks:
             landmarks = results.pose_landmarks.landmark
@@ -89,6 +70,8 @@ def extract_angles(image_np):
             right_ankle = np.array([landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].x,
                                     landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].y,
                                     landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].z])
+            
+            right_shank_angle = shankAngleCalculationProcess(right_ankle, right_knee)
 
             # Calculate angles (in degrees)
             angle_left_elbow = np.degrees(np.arccos(np.dot((left_shoulder - left_elbow), (left_wrist - left_elbow)) /
@@ -125,95 +108,12 @@ def extract_angles(image_np):
             angle_right_hip_knee = np.degrees(np.arccos(np.dot((left_hip - right_hip), (right_knee - right_hip)) /
                                                  (np.linalg.norm(left_hip - right_hip) *
                                                   np.linalg.norm(right_knee - right_hip))))
+            
+            angle_values = [angle_left_elbow, angle_right_elbow, angle_left_shoulder, angle_right_shoulder,angle_left_knee, angle_right_knee, 
+                    angle_left_hip, angle_right_hip, angle_left_hip_knee, angle_right_hip_knee, right_shank_angle]
+            
+            features = [[angle_name, angle_value] for angle_name, angle_value in zip(angle_names, angle_values)]
 
-            return [angle_left_elbow, angle_right_elbow, angle_left_shoulder, angle_right_shoulder,angle_left_knee, angle_right_knee, 
-                    angle_left_hip, angle_right_hip, angle_left_hip_knee, angle_right_hip_knee]
+            return features
         else:
             return None
-
-# def video_to_frames(video_path, output_dir, frame_skip):
-#     # Create output directory if it doesn't exist
-#     os.makedirs(output_dir, exist_ok=True)
-    
-#     print(video_path);
-#     # Open the video file
-#     cap = cv2.VideoCapture(video_path)
-#     frame_count = 0
-    
-#     # Read frames from the video
-#     while cap.isOpened():
-#         ret, frame = cap.read()
-#         if not ret:
-#             break
-        
-#         # Save the frame as an image file
-#         if frame_count % frame_skip == 0:
-#             frame_path = os.path.join(output_dir, f'frame_{frame_count}.jpg')
-#             cv2.imwrite(frame_path, frame)
-        
-#             print(frame_count);
-#         frame_count += 1
-    
-#     # Release the VideoCapture
-#     cap.release()
-
-# @app.route('/process_video', methods=['POST'])
-# def process_video():
-#     data = request.json
-#     print(data);
-#     video_path = data['videoPath']
-#     output_dir = data['outputDir']
-#     frame_skip = data['frameSkip']
-
-#     video_path = f'D:\SLIIT\Academic\YEAR 04\Research\PP1\Research-Demo-Personal\Backend\server\{video_path}'
-
-#     video_to_frames(video_path, output_dir, frame_skip)
-
-#     return jsonify({'message': 'Video processing completed'})
-
-@app.route('/process_image', methods=['POST'])
-def extract_angles_endpoint():
-    # Check if an image file is present in the request
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image provided'}), 400
-
-    # Read the image file from the request
-    image_file = request.files['image']
-
-    # Check if the file is empty
-    if image_file.filename == '':
-        return jsonify({'error': 'Empty file provided'}), 400
-
-    # Read the image as a numpy array
-    image_bytes = image_file.read()
-    nparr = np.frombuffer(image_bytes, np.uint8)
-    image_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-    # Extract angles from the image
-    angles = extract_angles(image_np)
-
-    if angles is not None:
-        # Return the extracted angles as a JSON response
-        return jsonify({'angles': angles}), 200
-    else:
-        return jsonify({'error': 'No poses detected in the image'}), 400
-
-@app.route('/predict', methods=['POST'])
-def predict():
-    # Receive features from the request
-    features = request.json['features']
-
-    # Extract angle values from the features
-    angle_values = [angle[1] for angle in features]
-
-    # Preprocess the features
-    features_normalized = scaler.transform([angle_values])
-
-    # Predict using the classifier
-    predicted_labels = clf.predict(features_normalized)
-
-    # Return the predicted labels
-    return jsonify({'Performed a shot is': predicted_labels[0]})
-
-if __name__ == '__main__': 
-    app.run(debug=True)  # Run the Flask app

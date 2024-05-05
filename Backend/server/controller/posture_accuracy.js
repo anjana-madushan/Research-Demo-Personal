@@ -5,6 +5,54 @@ import FormData from 'form-data';
 import fs from 'fs';
 const router = Router();
 
+// Set up multer storage for uploaded images
+const imageStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/frames/');
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
+
+const imageUpload = multer({ storage: imageStorage }).single('image');
+
+//image upload router
+router.post('/upload/image', (req, res) => {
+  imageUpload(req, res, async (err) => {
+    try {
+      if (err instanceof multer.MulterError) {
+        return res.status(400).send('Error uploading image.');
+      } else if (err) {
+        return res.status(500).send('Error uploading image.');
+      }
+
+      // Read the uploaded image file
+      const imageBuffer = fs.readFileSync(req.file.path);
+
+      // Created a FormData object
+      const formData = new FormData();
+      formData.append('image', imageBuffer, { filename: req.file.originalname });
+
+      // POST request to Flask endpoint
+      const pythonServerUrl = 'http://127.0.0.1:5000';
+      const response = await axios.post(`${pythonServerUrl}/process_image`, formData, {
+        headers: {
+          ...formData.getHeaders(), // Include form data headers
+        },
+      });
+
+      console.log('Python server response:', response.data);
+      return res.send('Image processing and angle detection completed');
+    } catch (error) {
+      console.log('Error uploading image:', error);
+      return res.status(500).send('Error uploading image.');
+    }
+  });
+});
+
+export default router;
+
 // Set up multer storage for uploaded files
 // const storage = multer.diskStorage({
 //   destination: function (req, file, cb) {
@@ -15,16 +63,6 @@ const router = Router();
 //     console.log(console.log(file.originalname))
 //   }
 // });
-
-// Set up multer storage for uploaded images
-const imageStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/frames/');
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname);
-  }
-});
 
 // const upload = multer({ storage: storage });
 
@@ -54,39 +92,3 @@ const imageStorage = multer.diskStorage({
 //     console.log('Error ', e)
 //   }
 // });
-
-const imageUpload = multer({ storage: imageStorage }).single('image');
-router.post('/upload/image', (req, res) => {
-  imageUpload(req, res, async (err) => {
-    try {
-      if (err instanceof multer.MulterError) {
-        return res.status(400).send('Error uploading image.');
-      } else if (err) {
-        return res.status(500).send('Error uploading image.');
-      }
-
-      // Read the uploaded image file
-      const imageBuffer = fs.readFileSync(req.file.path);
-
-      // Create a FormData object
-      const formData = new FormData();
-      formData.append('image', imageBuffer, { filename: req.file.originalname });
-
-      // Make a POST request to Flask endpoint
-      const pythonServerUrl = 'http://127.0.0.1:5000';
-      const response = await axios.post(`${pythonServerUrl}/process_image`, formData, {
-        headers: {
-          ...formData.getHeaders(), // Include form data headers
-        },
-      });
-
-      console.log('Python server response:', response.data);
-      res.send('Image processing and angle detection completed');
-    } catch (error) {
-      console.log('Error uploading image:', error);
-      res.status(500).send('Error uploading image.');
-    }
-  });
-});
-
-export default router;

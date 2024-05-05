@@ -1,17 +1,10 @@
 from flask import Flask, request, jsonify # type: ignore
 import numpy as np
 import cv2
-import pandas as pd
-import joblib
 from utils.extract_angles import extract_angles
+from utils.prediction import predict
 
 app = Flask(__name__)
-
-# load the classification model
-clf = joblib.load(r'd:\SLIIT\Academic\YEAR 04\Research\ModelTraining\models\random_forest_classification.pkl')
-
-# Load the MinMaxScaler
-scaler = joblib.load(r'D:\SLIIT\Academic\YEAR 04\Research\ModelTraining\scalers\min_max_scaler.pkl')
 
 @app.route('/process_image', methods=['POST'])
 def extract_angles_endpoint():
@@ -31,7 +24,7 @@ def extract_angles_endpoint():
     nparr = np.frombuffer(image_bytes, np.uint8)
     image_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-    # Extract angles from the image
+    # Extract angles from the image using extract_angle util function
     angles = extract_angles(image_np)
 
     if angles is not None:
@@ -40,32 +33,6 @@ def extract_angles_endpoint():
         return predict(finalized_angles)
     else:
         return jsonify({'error': 'No poses detected in the image'}), 400
-
-# @app.route('/predict', methods=['POST'])
-def predict(input_angles):
-    # Receive features from the request
-    features = input_angles.json['features']
-
-    # Extract angle values from the features
-    angle_values = [angle[1] for angle in features]
-
-    # Preprocess the features
-    features_normalized = scaler.transform([angle_values])
-
-    # Predict using the classifier
-    predicted_labels = clf.predict(features_normalized)
-
-    # output_data = {
-    #     'input_angles': features,  # Only include the features
-    #     'predicted_labels': {'Performed a shot is': predicted_labels[0]}
-    # }
-
-    output_data = {
-        'predicted_labels': {'Performed shot is': predicted_labels[0]}
-    }
-
-    # Return the dictionary
-    return output_data
 
 # @app.route('/process_video', methods=['POST'])
 # def process_video():
@@ -81,5 +48,6 @@ def predict(input_angles):
 
 #     return jsonify({'message': 'Video processing completed'})
 
+# Run the Flask app
 if __name__ == '__main__': 
-    app.run(debug=True)  # Run the Flask app
+    app.run(debug=True)  

@@ -43,7 +43,7 @@ router.post('/upload/image', (req, res) => {
       });
 
       console.log('Python server response:', response.data);
-      return res.send('Image processing and angle detection completed');
+      return res.status(200).json({ message: 'Image processing and angle detection completed', data: response.data });
     } catch (error) {
       console.log('Error uploading image:', error);
       return res.status(500).send('Error uploading image.');

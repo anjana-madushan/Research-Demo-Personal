@@ -1,8 +1,8 @@
 import { useState, useRef } from "react";
-import { Button, Typography, Box } from "@mui/material";
+import { Button, Typography, Box, CircularProgress } from "@mui/material";
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
-import ShotClassification from "../Outputs/shot_classification";
+import { ShotClassification } from "../Outputs/shotClassification";
 import axios from "axios";
 import { styled } from "@mui/material";
 
@@ -14,12 +14,18 @@ const VideoUpload = () => {
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState('');
   const [fileName, setFileName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const videoRef = useRef(null);
 
   const handleFileChange = (event) => {
     const selectedFile = event.target.files[0];
     setFile(selectedFile);
     setFileName(selectedFile ? selectedFile.name : '');
+
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 3000);
   };
 
   const captureFrame = async () => {
@@ -49,7 +55,7 @@ const VideoUpload = () => {
       );
       const predictedLabel = response.data.data.predicted_labels['Performed shot is'];
       setMessage(predictedLabel);
-      console.log(response.data)
+      console.log(response.data);
     } catch (error) {
       console.log(error);
     }
@@ -71,9 +77,6 @@ const VideoUpload = () => {
         gap: 2,
       }}
     >
-      <Typography variant="h3" fontWeight="bold">
-        Batting Technique Checker
-      </Typography>
       <input
         type="file"
         accept="video/*"
@@ -88,8 +91,27 @@ const VideoUpload = () => {
           </UploadButton>
         </label>
       )}
+      {message && <ShotClassification message={message} />}
       {fileName && <Typography>{fileName}</Typography>}
       <Box sx={{ position: 'relative', maxWidth: 700 }}>
+        {isLoading ? (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: -2,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: 'rgba(255, 255, 255, 0.5)',
+              zIndex: 9999,
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        ) : null}
         {file && (
           <video
             ref={videoRef}
@@ -99,6 +121,7 @@ const VideoUpload = () => {
             muted
             width="100%"
             onLoadedMetadata={handleVideoLoadedMetadata}
+            style={{ visibility: isLoading ? 'hidden' : 'visible' }} // Hide video while loading
           />
         )}
         {file && (
@@ -134,7 +157,6 @@ const VideoUpload = () => {
             </Button>
           </Box>
         )}
-        {message && <ShotClassification message={message} />}
       </Box>
     </Box>
   );

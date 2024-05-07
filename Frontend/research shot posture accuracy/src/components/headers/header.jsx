@@ -11,7 +11,7 @@ export default function Banner() {
     >
       <CardMedia
         component="img"
-        height="450"
+        height="650"
         image="src/assets/images/banner.jpg"
         alt="Banner Image"
         sx={{

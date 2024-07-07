@@ -1,4 +1,5 @@
 import joblib
+from  Accuracy_calculations.accuracy_checker import calculate_accuracy
 
 # load the classification model
 clf = joblib.load(r'd:\SLIIT\Academic\YEAR 04\Research\ModelTraining\models\random_forest_classification.pkl')
@@ -25,8 +26,10 @@ def predict(input_angles):
     #     'predicted_labels': {'Performed a shot is': predicted_labels[0]}
     # }
 
+    results = calculate_accuracy(predicted_labels[0], features)
+
     output_data = {
-        'predicted_labels': {'Performed shot is': predicted_labels[0]}
+        'predicted_labels': {'Performed shot is': predicted_labels[0]}, 'Accuracy checker':results
     }
 
     return output_data

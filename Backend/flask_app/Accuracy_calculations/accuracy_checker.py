@@ -2,12 +2,13 @@ import pandas as pd
 
 stats_directory = 'D:/SLIIT/Academic/YEAR 04/Research/ModelTraining/stats'
 
-def calculate_tolerance_ranges(df):
+def calculate_tolerance_ranges(stats_data):
     
-    tolerances = pd.DataFrame(index=df.index)
-    tolerances['Angle'] = df['Angle']
-    tolerances['Upper_tolerance'] = abs(df['Average'] +  (df['Standard Deviation (Above Average)']))
-    tolerances['lower_tolerance'] = abs(df['Average'] - (df['Standard Deviation (Below Average)']))
+    tolerances = pd.DataFrame(index=stats_data.index)
+    tolerances['Angle'] = stats_data['Angle']
+    tolerances['Upper_tolerance'] = abs(stats_data['Average'] +  (stats_data['Standard Deviation (Above Average)']))
+    tolerances['lower_tolerance'] = abs(stats_data['Average'] - (stats_data['Standard Deviation (Below Average)']))
+
     return tolerances
 
 def check_angle_upper_lower_status(input_angles, averageStats):
@@ -55,12 +56,6 @@ def calculate_percentage_accuracy(average_angle_status, tolerances, input_angles
                   correct_percentage = 0
                   continue
                 print("error with angle", actual_deviation/expected_deviation, correct_percentage, status, angle_name)
-                # if(error<0):
-                #         #actual deviation is higher than the expected deviation
-                #     error = abs(error)
-                #     errors.append(error)
-                # elif(error>0):
-                #     errors.append(error)
            
             elif status < 0:
                 use_lower_tolerance = tolerances.loc[tolerances['Angle'] == angle_name, 'lower_tolerance'].values[0]
@@ -73,12 +68,6 @@ def calculate_percentage_accuracy(average_angle_status, tolerances, input_angles
                   correct_percentage = 0
                   continue
                 print("error with angle", actual_deviation/use_lower_tolerance, correct_percentage, status, angle_name)
-                # if(error<0):
-                #     #actual deviation is higher than the expected deviation
-                #     error = abs(error)
-                #     errors.append(error)
-                # elif(error>0):
-                #     errors.append(error)
             correctness.append(correct_percentage)
             print('errors sum process', sum(correctness))
                 
@@ -88,33 +77,26 @@ def calculate_percentage_accuracy(average_angle_status, tolerances, input_angles
     accuracy = round(overall_correctness) 
     return accuracy
 
-def calculate_accuracy(shotType, input_angles):
+def calculate_accuracy(shot_type, input_angles):
     
     print(input_angles)
-    forward_drive_stats = pd.read_csv(f'{stats_directory}/forward_drive_stats.csv')
-
-    tolerances = 0
     
-    if shotType == 'forward defence':
-        forward_defence_stats = pd.read_csv(f'{stats_directory}/forward_defence_stats.csv')
-        tolerances = calculate_tolerance_ranges(forward_defence_stats)
-        print('fde',tolerances)
-    elif shotType == 'forward drive':
-        print(forward_drive_stats)
-        tolerances = calculate_tolerance_ranges(forward_drive_stats)
-        print(tolerances)
-    elif shotType == 'backfoot defence':
-        backfoot_defence_stats = pd.read_csv(f'{stats_directory}/backfoot_defence_stats.csv')
-        tolerances = calculate_tolerance_ranges(backfoot_defence_stats)
-        print('bd',tolerances)
-    elif shotType == 'backfoot drive':
-        backfoot_drive_stats = pd.read_csv(f'{stats_directory}/backfoot_drive_stats.csv')
-        tolerances = calculate_tolerance_ranges(backfoot_drive_stats)
-        print('bdr',tolerances)
+    stats_files_for_batting_shots = {
+        'forward defence': 'forward_defence_stats.csv',
+        'forward drive': 'forward_drive_stats.csv',
+        'backfoot defence': 'backfoot_defence_stats.csv',
+        'backfoot drive': 'backfoot_drive_stats.csv'
+    }
 
-    average_angle_status = check_angle_upper_lower_status(input_angles, forward_drive_stats)
-    print(average_angle_status)
+    if shot_type not in stats_files_for_batting_shots:
+        raise ValueError(f"Unknown batting shot: {shot_type}")
+    
+    stats_file = f'{stats_directory}/{stats_files_for_batting_shots[shot_type]}'
+    stats_data = pd.read_csv(stats_file)
 
-    percentage_error = calculate_percentage_accuracy(average_angle_status, tolerances, input_angles, forward_drive_stats)
+    tolerances = calculate_tolerance_ranges(stats_data)
+    average_angle_status = check_angle_upper_lower_status(input_angles, stats_data)
+
+    percentage_error = calculate_percentage_accuracy(average_angle_status, tolerances, input_angles, stats_data)
 
     return percentage_error

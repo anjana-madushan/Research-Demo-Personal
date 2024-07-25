@@ -39,6 +39,9 @@ def calculate_percentage_accuracy(average_angle_status, tolerances, input_angles
     use_upper_tolerance = 0
     use_lower_tolerance = 0
     actual_deviation = 0
+    considered_angles = 0
+    considered_left_angles = 0
+    considered_right_angles = 0
     
     for angle_name, input_angle_value in input_angles:
         if angle_name in average_angle_status['Angle'].values:
@@ -47,32 +50,45 @@ def calculate_percentage_accuracy(average_angle_status, tolerances, input_angles
 
             if status > 0:
                 use_upper_tolerance = tolerances.loc[tolerances['Angle'] == angle_name, 'Upper_tolerance'].values[0]
-                actual_deviation = input_angle_value - avg_value
-                expected_deviation = use_upper_tolerance - avg_value
-                error = (actual_deviation/expected_deviation)*100
-                if error<100:
-                  correct_percentage = 100 - error
-                elif error>100:
-                  correct_percentage = 0
-                  continue
-                print("error with angle", actual_deviation/expected_deviation, correct_percentage, status, angle_name)
+                print('this is upper_tolrance', use_upper_tolerance, angle_name)
+                if use_upper_tolerance<input_angle_value:
+                    print(input_angle_value)
+                    actual_deviation = input_angle_value - avg_value
+                    expected_deviation = use_upper_tolerance - avg_value
+                    error = (actual_deviation/expected_deviation)*100
+                    print('error', error)
+                    if error<100:
+                      correct_percentage = 100 - error
+                      considered_left_angles = considered_left_angles+1 
+                      print(considered_left_angles)
+                    if error>100:
+                      correct_percentage = 0
+                      continue
+                    print("error with angle", actual_deviation/expected_deviation, correct_percentage, status, angle_name)
            
             elif status < 0:
                 use_lower_tolerance = tolerances.loc[tolerances['Angle'] == angle_name, 'lower_tolerance'].values[0]
-                actual_deviation = avg_value - input_angle_value
-                expected_deviation = avg_value - use_lower_tolerance
-                error = (actual_deviation/use_lower_tolerance)*100
-                if error<100:
-                  correct_percentage = 100 - error
-                elif error>100:
-                  correct_percentage = 0
-                  continue
-                print("error with angle", actual_deviation/use_lower_tolerance, correct_percentage, status, angle_name)
+                print('this is lower_tolrance', use_lower_tolerance, angle_name)
+                if use_lower_tolerance>input_angle_value:
+                    print(input_angle_value)
+                    actual_deviation = avg_value - input_angle_value
+                    expected_deviation = avg_value - use_lower_tolerance
+                    error = (actual_deviation/expected_deviation)*100
+                    print('error', error)
+                    if error<100:
+                      correct_percentage = 100 - error
+                      considered_right_angles = considered_right_angles+1 
+                      print(considered_right_angles)
+                    if error>100:
+                      correct_percentage = 0
+                      continue
+                    print("error with angle", actual_deviation/expected_deviation, correct_percentage, status, angle_name)
             correctness.append(correct_percentage)
             print('errors sum process', sum(correctness))
-                
-    overall_correctness = sum(correctness) / len(input_angles)
-    print(len(input_angles))
+            considered_angles = considered_left_angles + considered_right_angles
+    
+    overall_correctness = sum(correctness) / considered_angles
+    print(considered_angles)
     print('sum of correctness', sum(correctness))
     accuracy = round(overall_correctness) 
     return accuracy

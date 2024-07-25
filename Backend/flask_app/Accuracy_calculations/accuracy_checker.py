@@ -8,7 +8,7 @@ def calculate_tolerance_ranges(stats_data):
     tolerances['Angle'] = stats_data['Angle']
     tolerances['Upper_tolerance'] = abs(stats_data['Average'] +  (stats_data['Standard Deviation (Above Average)']))
     tolerances['lower_tolerance'] = abs(stats_data['Average'] - (stats_data['Standard Deviation (Below Average)']))
-
+    print(tolerances)
     return tolerances
 
 def check_angle_upper_lower_status(input_angles, averageStats):
@@ -96,6 +96,8 @@ def calculate_accuracy(shot_type, input_angles):
 
     tolerances = calculate_tolerance_ranges(stats_data)
     average_angle_status = check_angle_upper_lower_status(input_angles, stats_data)
+
+    print(average_angle_status)
 
     percentage_error = calculate_percentage_accuracy(average_angle_status, tolerances, input_angles, stats_data)
 

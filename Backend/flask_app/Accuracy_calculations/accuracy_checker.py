@@ -1,13 +1,13 @@
 import pandas as pd
 
-stats_directory = 'D:/SLIIT/Academic/YEAR 04/Research/ModelTraining/stats'
+stats_directory = 'D:/SLIIT/Academic/YEAR 04/Research/ModelTraining/newStats'
 
 def calculate_tolerance_ranges(stats_data):
     
     tolerances = pd.DataFrame(index=stats_data.index)
     tolerances['Angle'] = stats_data['Angle']
-    tolerances['Upper_tolerance'] = abs(stats_data['Average'] +  (stats_data['Standard Deviation (Above Average)']))
-    tolerances['lower_tolerance'] = abs(stats_data['Average'] - (stats_data['Standard Deviation (Below Average)']))
+    tolerances['Upper_tolerance'] = abs(stats_data['Average'] +  (stats_data['Standard Deviation (Above Average)'])*2)
+    tolerances['lower_tolerance'] = abs(stats_data['Average'] - (stats_data['Standard Deviation (Below Average)'])*2)
     print(tolerances)
     return tolerances
 
@@ -91,10 +91,10 @@ def calculate_accuracy(shot_type, input_angles):
     print(input_angles)
     
     stats_files_for_batting_shots = {
-        'forward defence': 'forward_defence_stats.csv',
-        'forward drive': 'forward_drive_stats.csv',
-        'backfoot defence': 'backfoot_defence_stats.csv',
-        'backfoot drive': 'backfoot_drive_stats.csv'
+        'forward defence': 'forward_defence_3dstats.csv',
+        'forward drive': 'forward_drive_3dstats.csv',
+        'backfoot defence': 'backfoot_defence_3dstats.csv',
+        'backfoot drive': 'backfoot_drive_3dstats.csv'
     }
 
     if shot_type not in stats_files_for_batting_shots:

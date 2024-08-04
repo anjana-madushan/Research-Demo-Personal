@@ -2,10 +2,10 @@ import joblib
 from  Accuracy_calculations.accuracy_checker import calculate_accuracy
 
 # load the classification model
-clf = joblib.load(r'd:\SLIIT\Academic\YEAR 04\Research\ModelTraining\models\random_forest_classification.pkl')
+clf = joblib.load(r'd:\\SLIIT\\Academic\\YEAR 04\\Research\\ModelTraining\\Re-trainedModel\\random_forest_classification.pkl')
 
 # Load the MinMaxScaler
-scaler = joblib.load(r'D:\SLIIT\Academic\YEAR 04\Research\ModelTraining\scalers\min_max_scaler.pkl')
+scaler = joblib.load(r'D:\\SLIIT\\Academic\\YEAR 04\\Research\\ModelTraining\\New_scalers\\min_max_scaler.pkl')
 
 
 def predict(input_angles):

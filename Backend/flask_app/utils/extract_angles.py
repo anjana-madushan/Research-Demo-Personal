@@ -9,7 +9,7 @@ def extract_angles(image_np):
 
     preprocessed_image = preprocess_image(image_np)
 
-    with mp_pose.Pose(static_image_mode=True, model_complexity=2, enable_segmentation=False, min_detection_confidence=0.5) as pose:
+    with mp_pose.Pose(static_image_mode=True, model_complexity=2, enable_segmentation=False, min_detection_confidence=0.2) as pose:
         # Convert the BGR image to RGB before processing
         image_rgb = cv2.cvtColor(preprocessed_image, cv2.COLOR_BGR2RGB)
         

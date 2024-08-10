@@ -1,13 +1,17 @@
 import pandas as pd
 
-stats_directory = 'D:/SLIIT/Academic/YEAR 04/Research/ModelTraining/newStats'
+stats_directory = 'D:/SLIIT/Academic/YEAR 04/Research/ModelTraining/3dNewStats'
 
 def calculate_tolerance_ranges(stats_data):
     
     tolerances = pd.DataFrame(index=stats_data.index)
     tolerances['Angle'] = stats_data['Angle']
-    tolerances['Upper_tolerance'] = abs(stats_data['Average'] +  (stats_data['Standard Deviation (Above Average)'])*2)
-    tolerances['lower_tolerance'] = abs(stats_data['Average'] - (stats_data['Standard Deviation (Below Average)'])*2)
+    tolerances['Upper_tolerance_1'] = abs(stats_data['Average'] + (stats_data['Standard Deviation (All)']))
+    tolerances['lower_tolerance_1'] = abs(stats_data['Average'] - (stats_data['Standard Deviation (All)']))
+    tolerances['Upper_tolerance_2'] = abs(stats_data['Average'] + 2*(stats_data['Standard Deviation (All)']))
+    tolerances['lower_tolerance_2'] = abs(stats_data['Average'] - 2*(stats_data['Standard Deviation (All)']))
+    tolerances['Upper_tolerance_2.5'] = abs(stats_data['Average'] + 2.5*(stats_data['Standard Deviation (All)']))
+    tolerances['lower_tolerance_2.5'] = abs(stats_data['Average'] - 2.5*(stats_data['Standard Deviation (All)']))
     print(tolerances)
     return tolerances
 
@@ -45,18 +49,45 @@ def calculate_percentage_accuracy(average_angle_status, tolerances, input_angles
         if angle_name in average_angle_status['Angle'].values:
             status = average_angle_status.loc[average_angle_status['Angle'] == angle_name, 'Status'].values[0]
             avg_value = shot_stats.loc[shot_stats['Angle'] == angle_name, 'Average'].values[0]
+            upper_tolerance_1 = tolerances.loc[tolerances['Angle'] == angle_name, 'Upper_tolerance_1'].values[0]
+            lower_tolerance_1 = tolerances.loc[tolerances['Angle'] == angle_name, 'lower_tolerance_1'].values[0]
+            upper_tolerance_2 = tolerances.loc[tolerances['Angle'] == angle_name, 'Upper_tolerance_2'].values[0]
+            lower_tolerance_2 = tolerances.loc[tolerances['Angle'] == angle_name, 'lower_tolerance_2'].values[0]
+            upper_tolerance_end = tolerances.loc[tolerances['Angle'] == angle_name, 'Upper_tolerance_2.5'].values[0]
+            lower_tolerance_end = tolerances.loc[tolerances['Angle'] == angle_name, 'lower_tolerance_2.5'].values[0]
 
             if status > 0:
-                upper_tolerance = tolerances.loc[tolerances['Angle'] == angle_name, 'Upper_tolerance'].values[0]
-                actual_deviation = input_angle_value - avg_value
-                expected_deviation = upper_tolerance - avg_value
+                if lower_tolerance_1 <= input_angle_value <= upper_tolerance_1:
+                    correct_percentage = 100
+                elif upper_tolerance_1 < input_angle_value <= upper_tolerance_2:
+                    actual_deviation = input_angle_value - avg_value
+                    expected_deviation = upper_tolerance_2 - avg_value
+                    error = (actual_deviation / expected_deviation) * 100 if expected_deviation != 0 else 100
+                    correct_percentage = max(0, 100 - error)
+                elif upper_tolerance_2 < input_angle_value <= upper_tolerance_end:
+                    actual_deviation = input_angle_value - avg_value
+                    expected_deviation = upper_tolerance_end - avg_value
+                    error = (actual_deviation / expected_deviation) * 100 if expected_deviation != 0 else 100
+                    correct_percentage = max(0, 100 - error)
+                else:
+                    print('Do Not Consider: ', angle_name)
+                    continue
             else:
-                lower_tolerance = tolerances.loc[tolerances['Angle'] == angle_name, 'lower_tolerance'].values[0]
-                actual_deviation = avg_value - input_angle_value
-                expected_deviation = avg_value - lower_tolerance
-
-            error = (actual_deviation / expected_deviation) * 100
-            correct_percentage = max(0, 100 - error)
+                if lower_tolerance_end <= input_angle_value <= lower_tolerance_1:
+                    correct_percentage = 100
+                elif lower_tolerance_2 <= input_angle_value < lower_tolerance_1:
+                    actual_deviation = avg_value - input_angle_value
+                    expected_deviation = avg_value - lower_tolerance_2
+                    error = (actual_deviation / expected_deviation) * 100 if expected_deviation != 0 else 100
+                    correct_percentage = max(0, 100 - error)
+                elif lower_tolerance_end < input_angle_value <= lower_tolerance_2:
+                    actual_deviation = avg_value - input_angle_value
+                    expected_deviation = avg_value - lower_tolerance_end
+                    error = (actual_deviation / expected_deviation) * 100 if expected_deviation != 0 else 100
+                    correct_percentage = max(0, 100 - error)
+                else:
+                    print('Do Not Consider: ', angle_name)
+                    continue
 
             if correct_percentage > 0:
                 if status > 0:
@@ -85,6 +116,7 @@ def calculate_percentage_accuracy(average_angle_status, tolerances, input_angles
     print('sum of correctness:', sum(correctness))
 
     return accuracy
+
 
 def calculate_accuracy(shot_type, input_angles):
     

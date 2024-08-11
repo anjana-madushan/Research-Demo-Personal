@@ -1,38 +1,44 @@
 import joblib
-from  Accuracy_calculations.accuracy_checker import calculate_accuracy
+import pandas as pd
+from Accuracy_calculations.accuracy_checker import calculate_accuracy
 
-# load the classification model
-clf = joblib.load(r'd:\\SLIIT\\Academic\\YEAR 04\\Research\\ModelTraining\\New-Re-trainedModel\\random_forest_classification.pkl')
+# Load the classification model
+clf = joblib.load(r'd:\\SLIIT\\Academic\\YEAR 04\\Research\\ModelTraining\\Aug4-trainedModel\\random_forest_classification.pkl')
 
-# Load the MinMaxScaler
-scaler = joblib.load(r'D:\\SLIIT\\Academic\\YEAR 04\\Research\\ModelTraining\\Newest_scalers\\min_max_scaler.pkl')
+# Load the MinMaxScaler if needed
+# scaler = joblib.load(r'D:\\SLIIT\\Academic\\YEAR 04\\Research\\ModelTraining\\Newest_scalers\\min_max_scaler.pkl')
 
+def predict(features):
+    try:
+        # Convert the dictionary into a DataFrame with a single row
+        df = pd.DataFrame([features])
+        output_error = {}
 
-def predict(input_angles):
-    # Receive features from the request
-    features = input_angles.json['features']
+        # Predict using the classifier
+        predicted_labels = clf.predict(df)
+        confidence_levels = clf.predict_proba(df)
 
-    # Extract angle values from the features
-    angle_values = [angle[1] for angle in features]
+        # Get the confidence level for the predicted class
+        predicted_class_confidence = max(confidence_levels[0])
 
-    # Preprocess the features
-    features_normalized = scaler.transform([angle_values])
+        if predicted_class_confidence < 0.5:
+            output_error = 'The pose is not recognizable'
+            output_data = {
+                'response': output_error,
+                'Shot you are trying': [predicted_labels[0]],  # Changed from set to list
+                'Confidence Levels': {shot_type: confidence for shot_type, confidence in zip(clf.classes_, confidence_levels[0])},
+                'Highest Confidence Level': predicted_class_confidence
+            }
+        else:
+            output_data = {
+                'predicted_labels': [f'Performed shot is {predicted_labels[0]}'],  # Changed from set to list
+                'Confidence Levels': {shot_type: confidence for shot_type, confidence in zip(clf.classes_, confidence_levels[0])},
+                'Highest Confidence Level': predicted_class_confidence
+            }
 
-    # Predict using the classifier
-    predicted_labels = clf.predict(features_normalized)
-    confidence_levels = clf.predict_proba(features_normalized)
-
-    # Get the confidence level for the predicted class
-    predicted_class_confidence = max(confidence_levels[0])
-    
-    # Get the accuracy of the predicted shot
-    results = calculate_accuracy(predicted_labels[0], features)
-
-    output_data = {
-        'predicted_labels': {'Performed shot is': predicted_labels[0]}, 'Accuracy checker':results,
-        'Confidence Levels': {f"{shot_type}": confidence for shot_type, confidence in zip(clf.classes_, confidence_levels[0])},
-        'Highest Confidence Level': predicted_class_confidence,
-        'Accuracy checker': results
-    }
+    except Exception as e:
+        output_data = {
+            'error': str(e)
+        }
 
     return output_data

@@ -12,7 +12,7 @@ def calculate_tolerance_ranges(stats_data):
     tolerances['lower_tolerance_2'] = abs(stats_data['Average'] - 2*(stats_data['Standard Deviation (All)']))
     tolerances['Upper_tolerance_2.5'] = abs(stats_data['Average'] + 2.5*(stats_data['Standard Deviation (All)']))
     tolerances['lower_tolerance_2.5'] = abs(stats_data['Average'] - 2.5*(stats_data['Standard Deviation (All)']))
-    print(tolerances)
+    # print(tolerances)
     return tolerances
 
 def check_angle_upper_lower_status(input_angles, averageStats):
@@ -44,6 +44,7 @@ def calculate_percentage_accuracy(average_angle_status, tolerances, input_angles
     considered_low_std_angles_dict = {}
     totally_wrong_high_std_angles_dict = {}
     totally_wrong_low_std_angles_dict = {}
+    false_joints = {}
 
     for angle_name, input_angle_value in input_angles:
         if angle_name in average_angle_status['Angle'].values:
@@ -86,6 +87,7 @@ def calculate_percentage_accuracy(average_angle_status, tolerances, input_angles
                     error = (actual_deviation / expected_deviation) * 100 if expected_deviation != 0 else 100
                     correct_percentage = max(0, 100 - error)
                 else:
+                    false_joints[angle_name] = input_angle_value, avg_value
                     print('Do Not Consider: ', angle_name)
                     continue
 
@@ -93,34 +95,26 @@ def calculate_percentage_accuracy(average_angle_status, tolerances, input_angles
                 if status > 0:
                     considered_left_angles += 1
                     considered_high_std_angles_dict[angle_name] = input_angle_value
-                else:
+                elif status < 0:
                     considered_right_angles += 1
                     considered_low_std_angles_dict[angle_name] = input_angle_value
-            else:
-                if status > 0:
-                    totally_wrong_high_std_angles_dict[angle_name] = input_angle_value
                 else:
-                    totally_wrong_low_std_angles_dict[angle_name] = input_angle_value
+                    print('Error')
 
             correctness.append(correct_percentage)
 
     considered_angles = considered_left_angles + considered_right_angles
     overall_correctness = sum(correctness) / considered_angles if considered_angles > 0 else 0
-    accuracy = round(overall_correctness)
+    considered_joints_accuracy = round(overall_correctness)
 
     print('considered_high_std_angles_dict:', considered_high_std_angles_dict)
-    print('totally_wrong_high_std_angles_dict:', totally_wrong_high_std_angles_dict)
     print('considered_low_std_angles_dict:', considered_low_std_angles_dict)
-    print('totally_wrong_low_std_angles_dict:', totally_wrong_low_std_angles_dict)
     print('considered_angles:', considered_angles)
     print('sum of correctness:', sum(correctness))
 
-    return accuracy
-
+    return considered_joints_accuracy
 
 def calculate_accuracy(shot_type, input_angles):
-    
-    print(input_angles)
     
     stats_files_for_batting_shots = {
         'forward defence': 'forward_defence_3dstats.csv',
@@ -137,8 +131,6 @@ def calculate_accuracy(shot_type, input_angles):
 
     tolerances = calculate_tolerance_ranges(stats_data)
     average_angle_status = check_angle_upper_lower_status(input_angles, stats_data)
-
-    print(average_angle_status)
 
     percentage_error = calculate_percentage_accuracy(average_angle_status, tolerances, input_angles, stats_data)
 

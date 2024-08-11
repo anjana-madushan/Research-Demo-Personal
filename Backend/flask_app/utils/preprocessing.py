@@ -18,8 +18,8 @@ def preprocess_image(image):
     # # Convert image to 8-bit unsigned integer depth
     # uint8_image = (median_blurred_image * 255).astype(np.uint8)
 
-    plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-    plt.axis('off')  # Hide axes
-    plt.show()
+    # plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+    # plt.axis('off')  # Hide axes
+    # plt.show()
     
     return image

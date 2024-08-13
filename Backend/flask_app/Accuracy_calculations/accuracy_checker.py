@@ -69,7 +69,7 @@ def generate_rectification_messages(input_angles, stats_data, tolerances):
                     'general_reponse': (f"Your {angle_name_formatted} is too narrow. "
                                                f"Make it wider"),
                     'current_angle_value':round(input_angle_value),
-                    'mathematical_response':(f"Adjust it to be between {first_sd_lower:.2f} and {first_sd_upper:.2f}.")
+                    'mathematical_response':(f"Adjust it to be between {round(first_sd_lower)} and {round(first_sd_upper)}.")
                 }
             else:
                 message = {
@@ -78,7 +78,7 @@ def generate_rectification_messages(input_angles, stats_data, tolerances):
                     'general_reponse': (f"Your {angle_name_formatted} is too wide. "
                                                f"Make it narrow"),
                     'current_angle_value':round(input_angle_value),
-                    'mathematical_response':(f"Adjust it to be between {first_sd_lower:.2f} and {first_sd_upper:.2f}.")
+                    'mathematical_response':(f"Adjust it to be between {round(first_sd_lower)} and {round(first_sd_lower)}.")
                 }
             rectifications.append(message)
     

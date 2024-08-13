@@ -64,32 +64,33 @@ def generate_rectification_messages(input_angles, stats_data, tolerances):
 
             if input_angle_value < first_sd_lower:
                 message = {
-                    'angle_name': angle_name,
-                    'error_type': error_type,
-                    'general_reponse': (f"Your {angle_name_formatted} is too narrow. "
+                    'angle name': angle_name,
+                    'error type': error_type,
+                    'general reponse': (f"Your {angle_name_formatted} is too narrow. "
                                                f"Make it wider"),
-                    'current_angle_value':round(input_angle_value),
-                    'mathematical_response':(f"Adjust it to be between {round(first_sd_lower)} and {round(first_sd_upper)}.")
+                    'current angle value':round(input_angle_value),
+                    'mathematical response':(f"Adjust it to be between {round(first_sd_lower)} degree and {round(first_sd_upper)} degrees.")
                 }
             else:
                 message = {
-                    'angle_name': angle_name,
-                    'error_type': error_type,
-                    'general_reponse': (f"Your {angle_name_formatted} is too wide. "
+                    'angle name': angle_name,
+                    'error type': error_type,
+                    'general reponse': (f"Your {angle_name_formatted} is too wide. "
                                                f"Make it narrow"),
-                    'current_angle_value':round(input_angle_value),
-                    'mathematical_response':(f"Adjust it to be between {round(first_sd_lower)} and {round(first_sd_lower)}.")
+                    'current angle_value':(f"{round(input_angle_value)}°"),
+                    'mathematical_response':(f"Adjust it to be between {round(first_sd_lower)} degree and {round(first_sd_upper)} degrees.")
                 }
             rectifications.append(message)
     
     return rectifications
 
 def calculate_mae_accuracy(average_angle_status, tolerances, input_angles, stats_data):
-    correctness = []
+    absolute_deviations = []
     false_joints = {}
     incorrect_angles = {}
     rectification_needed = {}
-    
+    correctness = []
+
     for angle_name, input_angle_value in input_angles:
         if angle_name in average_angle_status['Angle'].values:
             avg_value = stats_data.loc[stats_data['Angle'] == angle_name, 'Average'].values[0]
@@ -98,25 +99,26 @@ def calculate_mae_accuracy(average_angle_status, tolerances, input_angles, stats
             first_sd_lower = tolerances.loc[tolerances['Angle'] == angle_name, 'First_SD_Lower'].values[0]
             first_sd_upper = tolerances.loc[tolerances['Angle'] == angle_name, 'First_SD_Upper'].values[0]
 
+            absolute_deviation = abs(input_angle_value - avg_value)
+
             if lower_tolerance <= input_angle_value <= upper_tolerance:
                 if first_sd_lower <= input_angle_value <= first_sd_upper:
-                    correct_percentage = 100
+                    correctness.append(100)
                 else:
-                    actual_deviation = abs(input_angle_value - avg_value)
-                    max_possible_deviation = max(abs(avg_value - first_sd_lower), abs(avg_value - first_sd_upper))
-                    error = (actual_deviation / max_possible_deviation) * 100 if max_possible_deviation != 0 else 100
-                    correct_percentage = max(0, 100 - error)
+                    # Append the absolute deviation to calculate MAE
+                    absolute_deviations.append(absolute_deviation)
                     false_joints[angle_name] = input_angle_value
                     rectification_needed[angle_name] = input_angle_value
             else:
-                correct_percentage = 0
+                # Handle angles outside the tolerance range
+                correctness.append(0)
                 incorrect_angles[angle_name] = input_angle_value
                 rectification_needed[angle_name] = input_angle_value
 
-            correctness.append(correct_percentage)
-    
-    overall_correctness = sum(correctness) / len(correctness) if correctness else 0
-    considered_joints_accuracy = round(overall_correctness)
+    overall_mae = sum(absolute_deviations) / len(absolute_deviations) if absolute_deviations else 0
+    print(overall_mae)
+    # Calculate the accuracy based on MAE
+    considered_joints_accuracy = round(100 - overall_mae)  # Convert MAE to a percentage accuracy
 
     # Generate rectification messages only for angles that need rectification
     rectifications = generate_rectification_messages(rectification_needed.items(), stats_data, tolerances)

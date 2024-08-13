@@ -1,7 +1,8 @@
 from flask import Flask, request, jsonify # type: ignore
 import numpy as np
 import cv2
-from utils.extract_angles import extract_angles, extract_distances
+from utils.extract_angles import extract_distances, extract_angles
+from Accuracy_calculations.accuracy_checker import calculate_accuracy
 from utils.prediction import predict
 
 app = Flask(__name__)
@@ -52,7 +53,7 @@ def extract_angles_endpoint():
     distances = extract_distances(image_np)
 
     if distances is not None:
-        output_data = predict(distances)
+        output_data = predict(distances, image_np)
         return jsonify(output_data)
     else:
         return jsonify({'error': 'No poses detected in the image'}), 400

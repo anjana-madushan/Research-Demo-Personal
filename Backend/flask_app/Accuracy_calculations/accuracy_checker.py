@@ -1,17 +1,17 @@
 import pandas as pd
 import json
 
-stats_directory = 'D:/SLIIT/Academic/YEAR 04/Research/Training/Stats'
+stats_directory = f'D:/SLIIT/Academic/YEAR 04/Research/Training'
 
-def calculate_tolerance_ranges(stats_data):
-    # Define the tolerance ranges using mean ± SD and 2*SD
-    tolerances = pd.DataFrame(index=stats_data.index)
-    tolerances['Angle'] = stats_data['Angle']
-    tolerances['Upper_tolerance'] = stats_data['Average'] + 2 * stats_data['Standard Deviation (All)']
-    tolerances['Lower_tolerance'] = stats_data['Average'] - 2 * stats_data['Standard Deviation (All)']
-    tolerances['First_SD_Upper'] = stats_data['Average'] + stats_data['Standard Deviation (All)']
-    tolerances['First_SD_Lower'] = stats_data['Average'] - stats_data['Standard Deviation (All)']
-    return tolerances
+# def calculate_tolerance_ranges(stats_data):
+#     # Define the tolerance ranges using mean ± SD and 2*SD
+#     tolerances = pd.DataFrame(index=stats_data.index)
+#     tolerances['Angle'] = stats_data['Angle']
+#     tolerances['Upper_tolerance'] = stats_data['Average'] + 2 * stats_data['Standard Deviation (All)']
+#     tolerances['Lower_tolerance'] = stats_data['Average'] - 2 * stats_data['Standard Deviation (All)']
+#     tolerances['First_SD_Upper'] = stats_data['Average'] + stats_data['Standard Deviation (All)']
+#     tolerances['First_SD_Lower'] = stats_data['Average'] - stats_data['Standard Deviation (All)']
+#     return tolerances
 
 def check_angle_upper_lower_status(input_angles, averageStats):
     status = []
@@ -132,7 +132,8 @@ def calculate_mae_accuracy(average_angle_status, tolerances, input_angles, stats
 
     return result
 
-def calculate_accuracy(shot_type, input_angles):
+def calculate_accuracy(shot_type, input_angles, matching_one):
+    # Define the mapping between shot types and their CSV files
     stats_files_for_batting_shots = {
         'forward_defence': 'forward_defence_3dstats.csv',
         'forward_drive': 'forward_drive_3dstats.csv',
@@ -140,18 +141,31 @@ def calculate_accuracy(shot_type, input_angles):
         'backfoot_drive': 'backfoot_drive_3dstats.csv'
     }
 
+    # Check if the shot_type is valid
     if shot_type not in stats_files_for_batting_shots:
         raise ValueError(f"Unknown batting shot: {shot_type}")
     
-    stats_file = f'{stats_directory}/{stats_files_for_batting_shots[shot_type]}'
-    stats_data = pd.read_csv(stats_file)
+    # Path to the relevant CSV file
+    feature_file = f'{stats_directory}/{stats_files_for_batting_shots[shot_type]}'
+    stats_data = pd.read_csv(feature_file)
+    
+    # Drop distance columns to focus on angles only
+    angle_columns = [col for col in stats_data.columns if 'distance' not in col]
+    
+    # Extract angles from the matching row
+    matching_angles = matching_one[angle_columns].to_dict()
+    
+    if not set(input_angles.keys()).issubset(set(angle_columns)):
+        raise ValueError("Input angles do not match the angle columns in the reference data")
 
-    # Calculate tolerance ranges using mean ± SD and 2*SD
-    tolerances = calculate_tolerance_ranges(stats_data)
-    input_angles_tuple = list(input_angles.items())
-    average_angle_status = check_angle_upper_lower_status(input_angles_tuple, stats_data)
+    mae = calculate_mae(input_angles, matching_angles)
+
+    # # Calculate tolerance ranges using mean ± SD and 2*SD
+    # tolerances = calculate_tolerance_ranges(stats_data)
+    # input_angles_tuple = list(input_angles.items())
+    # average_angle_status = check_angle_upper_lower_status(input_angles_tuple, stats_data)
 
     # Calculate the accuracy using MAE within the defined tolerances
-    result = calculate_mae_accuracy(average_angle_status, tolerances, input_angles_tuple, stats_data)
+    # result = calculate_mae_accuracy(average_angle_status, tolerances, input_angles_tuple, stats_data)
 
     return result['Accuracy'], result['Rectification Messages']

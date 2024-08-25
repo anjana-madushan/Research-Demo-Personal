@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Button, Typography, Box, CircularProgress } from "@mui/material";
+import { Button, Typography, Box, CircularProgress, Select, MenuItem, FormControl, InputLabel } from "@mui/material";
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import { ShotClassification } from "../Outputs/shotClassification";
@@ -15,6 +15,7 @@ const VideoUpload = () => {
   const [message, setMessage] = useState('');
   const [fileName, setFileName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [batsmanType, setBatsmanType] = useState(''); // New state for batsman type
   const videoRef = useRef(null);
 
   const handleFileChange = (event) => {
@@ -26,6 +27,10 @@ const VideoUpload = () => {
     setTimeout(() => {
       setIsLoading(false);
     }, 3000);
+  };
+
+  const handleBatsmanTypeChange = (event) => {
+    setBatsmanType(event.target.value);
   };
 
   const captureFrame = async () => {
@@ -42,6 +47,7 @@ const VideoUpload = () => {
 
     const formData = new FormData();
     formData.append("image", blob, "frame.png");
+    formData.append("batsmanType", batsmanType); // Append batsman type to the form data
 
     try {
       const response = await axios.post(
@@ -56,6 +62,7 @@ const VideoUpload = () => {
       const predictedLabel = response.data.data.predicted_labels['Performed shot is'];
       setMessage(predictedLabel);
       console.log(response.data);
+      console.log(response)
     } catch (error) {
       console.log(error);
     }
@@ -130,6 +137,8 @@ const VideoUpload = () => {
               display: "flex",
               justifyContent: "center",
               marginTop: 1,
+              flexDirection: "column",
+              alignItems: "center",
             }}
           >
             <Button
@@ -151,10 +160,23 @@ const VideoUpload = () => {
             <Button
               variant="contained"
               onClick={captureFrame}
-              sx={{ marginLeft: 1 }}
+              sx={{ marginTop: 1 }}
             >
               Select Frame
             </Button>
+            {/* Dropdown menu for selecting batsman type */}
+            <FormControl variant="outlined" sx={{ marginTop: 2, minWidth: 120 }}>
+              <InputLabel id="batsman-type-label">Batsman Type</InputLabel>
+              <Select
+                labelId="batsman-type-label"
+                value={batsmanType}
+                onChange={handleBatsmanTypeChange}
+                label="Batsman Type"
+              >
+                <MenuItem value="Right-Handed">Right-Handed</MenuItem>
+                <MenuItem value="Left-Handed">Left-Handed</MenuItem>
+              </Select>
+            </FormControl>
           </Box>
         )}
       </Box>

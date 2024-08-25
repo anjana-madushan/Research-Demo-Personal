@@ -7,10 +7,10 @@ def calculate_accuracy_and_mae(shot_type, input_angles, matching_one):
     print(matching_one)
     
     stats_files_for_batting_shots = {
-        'forward_defence': 'forward_defence.csv',
-        'forward_drive': 'forward_drive.csv',
-        'backfoot_defence': 'backfoot_defence.csv',
-        'backfoot_drive': 'backfoot_drive.csv'
+        'forward defence': 'forward_defence.csv',
+        'forward drive': 'forward_drive.csv',
+        'backfoot defence': 'backfoot_defence.csv',
+        'backfoot drive': 'backfoot_drive.csv'
     }
 
     deviation_thresholds = {

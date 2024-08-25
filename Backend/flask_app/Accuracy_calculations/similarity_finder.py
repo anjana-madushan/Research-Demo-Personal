@@ -20,9 +20,19 @@ def load_reference_data(shot_type):
 
 def find_closest_match(user_distances, shot_type):
 
+    if shot_type == 'backfoot defence':
+        shot_type = 'backfoot_defence'
+    elif shot_type == 'backfoot drive':
+        shot_type = 'backfoot_drive'
+    elif shot_type == 'forward defence':
+        shot_type = 'forward_defence'
+    elif shot_type == 'forward drive':
+        shot_type = 'forward_drive'
+
     # Load the reference data for the given shot type
     reference_data = load_reference_data(shot_type)
-    
+
+    print(shot_type)
     min_distance = float('inf')
     closest_image_name = None
 

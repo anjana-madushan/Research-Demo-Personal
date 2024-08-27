@@ -23,7 +23,8 @@ def calculate_accuracy_and_mae(shot_type, input_angles, closet_matches):
     print(closet_matches)
 
     # Compute averages and standard deviations for each angle column
-    angle_columns = [col for col in stats_data.columns if 'distance' not in col]
+    angle_columns = [col for col in stats_data.columns if 'angle' in col]
+    print(angle_columns)
     matching_angles_data = closet_matches[angle_columns]
 
     mean_values = matching_angles_data.mean()
@@ -41,9 +42,6 @@ def calculate_accuracy_and_mae(shot_type, input_angles, closet_matches):
         raise ValueError("No valid deviation thresholds available")
 
     # Use the updated deviation thresholds in the calculation
-    print(mean_values.to_dict())
-    print(deviation_thresholds)
-    print(input_angles)
     result = categorize_and_calculate_mae(input_angles, mean_values.to_dict(), deviation_thresholds)
 
     return result
@@ -64,10 +62,10 @@ def categorize_and_calculate_mae(input_angles, reference_angles, deviation_thres
             accurate_threshold, minor_error_threshold = deviation_thresholds.get(angle, (float('inf'), float('inf')))
 
             error = abs(input_value - reference_value)
-
-            if error <= accurate_threshold:
+            print(accurate_threshold, minor_error_threshold, angle, reference_value)
+            if error <= minor_error_threshold and abs(input_value)<abs(accurate_threshold):
                 correctness.append(100)
-            elif error <= minor_error_threshold:
+            elif error >= minor_error_threshold and error < 2*minor_error_threshold:
                 absolute_deviations.append(error)
                 false_joints[angle] = input_value
                 rectification_needed[angle] = input_value
@@ -80,7 +78,7 @@ def categorize_and_calculate_mae(input_angles, reference_angles, deviation_thres
 
     overall_mae = sum(absolute_deviations) / len(absolute_deviations) if absolute_deviations else 0
     mae_percentage = round(100 - overall_mae)  
-
+    print(mae_percentage)
     rectifications = generate_rectification_messages(
         rectification_needed.items(),
         reference_angles,

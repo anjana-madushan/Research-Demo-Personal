@@ -23,15 +23,15 @@ def predict(features, image_np):
         # Predict using the classifier with scaled features
         predicted_labels = clf.predict(scaled_features)
         confidence_levels = clf.predict_proba(scaled_features)
-        print(predicted_labels[0])
+        # print(predicted_labels[0])
         # Get the confidence level for the predicted class
         predicted_class_confidence = max(confidence_levels[0])
         accuracy_distances = extract_accuracy_distances(image_np)
-        closet_match = find_closest_match(accuracy_distances, predicted_labels[0])
+        closet_matches = find_closest_match(accuracy_distances, predicted_labels[0])
 
         angles = extract_angles(image_np)
-        result = calculate_accuracy_and_mae(predicted_labels[0], angles, closet_match)
-        print(result)
+        result = calculate_accuracy_and_mae(predicted_labels[0], angles, closet_matches)
+        # print(result)
         accuracy = result['Accuracy']
         rectifications = result['Rectification Messages']
         if predicted_class_confidence < 0.5:

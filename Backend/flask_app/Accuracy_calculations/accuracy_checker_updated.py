@@ -3,9 +3,7 @@ import numpy as np
 
 stats_directory = 'D:/SLIIT/Academic/YEAR 04/Research/Training/newData'
 
-def calculate_accuracy_and_mae(shot_type, input_angles, matching_one):
-    print(matching_one)
-    
+def calculate_accuracy_and_mae(shot_type, input_angles, closet_matches):
     stats_files_for_batting_shots = {
         'forward defence': 'forward_defence.csv',
         'forward drive': 'forward_drive.csv',
@@ -13,64 +11,40 @@ def calculate_accuracy_and_mae(shot_type, input_angles, matching_one):
         'backfoot drive': 'backfoot_drive.csv'
     }
 
-    deviation_thresholds = {
-        'angle_right_elbow': (10.0, 20.0),
-        'angle_left_elbow': (10.0, 20.0),
-        'angle_right_shoulder': (10.0, 20.0),
-        'angle_left_knee': (10.0, 20.0),
-        'angle_right_knee': (10.0, 20.0),
-        'angle_right_hip_knee': (10.0, 20.0),
-        'angle_left_hip_knee': (10.0, 20.0),
-        'angle_right_hip_shoulder': (10.0, 20.0),
-        'angle_right_shank': (10.0, 20.0),
-        'angle_left_shank': (10.0, 20.0)
-    }
-
     if shot_type not in stats_files_for_batting_shots:
         raise ValueError(f"Unknown batting shot: {shot_type}")
 
     stats_file = f'{stats_directory}/{stats_files_for_batting_shots[shot_type]}'
     stats_data = pd.read_csv(stats_file)
+    print(stats_file)
 
-    print('stats_file', stats_file)
-    print('stats_data columns:', stats_data.columns)
-    print('stats_data head:', stats_data.head())
+    # Ensure closet_matches is a DataFrame
+    closet_matches = pd.DataFrame(closet_matches)
+    print(closet_matches)
 
-    matching_row = stats_data[stats_data['image_name'] == matching_one]
-    if matching_row.empty:
-        raise ValueError(f"No matching row found for image_name {matching_one}")
-
-    print('matching_row columns:', matching_row.columns)
-    print('matching_row:', matching_row)
-
+    # Compute averages and standard deviations for each angle column
     angle_columns = [col for col in stats_data.columns if 'distance' not in col]
-    print("angle_columns", angle_columns)
+    matching_angles_data = closet_matches[angle_columns]
 
-    # Specify the columns you want to remove
-    columns_to_remove = ['left_shoulder_right_shoulder', 'right_shoulder_right_elbow', 'right_shoulder_right_hip', 'left_hip_right_hip', 'right_hip_right_knee', 'right_knee_right_ankle', 'label']
+    mean_values = matching_angles_data.mean()
+    std_values = matching_angles_data.std()
 
-    # Check which columns exist before attempting to drop them
-    existing_columns_to_remove = [col for col in columns_to_remove if col in matching_row.columns]
-    print("Existing columns to remove", existing_columns_to_remove)
+    # Define deviation thresholds based on the standard deviations
+    deviation_thresholds = {
+        angle: (mean_values[angle], std_values[angle])
+        for angle in angle_columns
+        if angle in mean_values
+    }
 
-    matching_row = matching_row.drop(columns=existing_columns_to_remove, errors='ignore')
-    print('matching_row after dropping columns', matching_row)
+    # Check for empty deviation thresholds
+    if not deviation_thresholds:
+        raise ValueError("No valid deviation thresholds available")
 
-    # Ensure matching_row is still valid and contains the necessary columns
-    angle_columns_in_matching_row = [col for col in angle_columns if col in matching_row.columns]
-    print("Angle columns in matching row:", angle_columns_in_matching_row)
-
-    if not angle_columns_in_matching_row:
-        raise ValueError("No valid angle columns available in the matching row")
-
-    matching_angles = matching_row[angle_columns_in_matching_row].iloc[0].to_dict()  # Use iloc[0] to get the first row as a Series
-    print('matching_angles', matching_angles)
-    print('input_angles', input_angles)
-
-    if not set(input_angles.keys()).issubset(set(angle_columns_in_matching_row)):
-        raise ValueError("Input angles do not match the angle columns in the reference data")
-
-    result = categorize_and_calculate_mae(input_angles, matching_angles, deviation_thresholds)
+    # Use the updated deviation thresholds in the calculation
+    print(mean_values.to_dict())
+    print(deviation_thresholds)
+    print(input_angles)
+    result = categorize_and_calculate_mae(input_angles, mean_values.to_dict(), deviation_thresholds)
 
     return result
 
@@ -106,23 +80,20 @@ def categorize_and_calculate_mae(input_angles, reference_angles, deviation_thres
 
     overall_mae = sum(absolute_deviations) / len(absolute_deviations) if absolute_deviations else 0
     mae_percentage = round(100 - overall_mae)  
-    print(mae_percentage)
 
-    # Generate rectification messages based on angles needing correction
     rectifications = generate_rectification_messages(
         rectification_needed.items(),
-        reference_angles,  
-        deviation_thresholds  
+        reference_angles,
+        deviation_thresholds
     )
 
     result = {
         'Accuracy': mae_percentage,
-        # 'False Joints': false_joints,
-        # 'Incorrect Angles': incorrect_angles,
         'Rectification Messages': rectifications
     }
 
     return result
+
 
 def generate_rectification_messages(rectification_needed_items, reference_angles, deviation_thresholds):
     rectifications = []

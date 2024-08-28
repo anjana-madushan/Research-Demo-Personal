@@ -16,15 +16,12 @@ def calculate_accuracy_and_mae(shot_type, input_angles, closet_matches):
 
     stats_file = f'{stats_directory}/{stats_files_for_batting_shots[shot_type]}'
     stats_data = pd.read_csv(stats_file)
-    print(stats_file)
 
     # Ensure closet_matches is a DataFrame
     closet_matches = pd.DataFrame(closet_matches)
-    print(closet_matches)
 
     # Compute averages and standard deviations for each angle column
     angle_columns = [col for col in stats_data.columns if 'angle' in col]
-    print(angle_columns)
     matching_angles_data = closet_matches[angle_columns]
 
     mean_values = matching_angles_data.mean()
@@ -62,7 +59,7 @@ def categorize_and_calculate_mae(input_angles, reference_angles, deviation_thres
             accurate_threshold, minor_error_threshold = deviation_thresholds.get(angle, (float('inf'), float('inf')))
 
             error = abs(input_value - reference_value)
-            print(accurate_threshold, minor_error_threshold, angle, reference_value)
+
             if error <= minor_error_threshold and abs(input_value)<abs(accurate_threshold):
                 correctness.append(100)
             elif error >= minor_error_threshold and error < 2*minor_error_threshold:
@@ -78,7 +75,7 @@ def categorize_and_calculate_mae(input_angles, reference_angles, deviation_thres
 
     overall_mae = sum(absolute_deviations) / len(absolute_deviations) if absolute_deviations else 0
     mae_percentage = round(100 - overall_mae)  
-    print(mae_percentage)
+    
     rectifications = generate_rectification_messages(
         rectification_needed.items(),
         reference_angles,

@@ -1,9 +1,9 @@
 import joblib
 import pandas as pd
-from Accuracy_calculations.accuracy_checker import calculate_accuracy
 from Accuracy_calculations.accuracy_checker_updated import calculate_accuracy_and_mae
 from Accuracy_calculations.similarity_finder import find_closest_match
-from utils.extract_angles import extract_angles, extract_accuracy_distances
+from distances_calculations.accuracy import extract_accuracy_distances
+from angle_calculations.extract_angles import extract_angles
 
 # Load the classification model
 clf = joblib.load(r'd:\\SLIIT\\Academic\\YEAR 04\\Research\\Training\\New-trainedModel\\random_forest_classification.pkl')
@@ -23,7 +23,7 @@ def predict(features, image_np):
         # Predict using the classifier with scaled features
         predicted_labels = clf.predict(scaled_features)
         confidence_levels = clf.predict_proba(scaled_features)
-        # print(predicted_labels[0])
+
         # Get the confidence level for the predicted class
         predicted_class_confidence = max(confidence_levels[0])
         accuracy_distances = extract_accuracy_distances(image_np)
@@ -31,14 +31,14 @@ def predict(features, image_np):
 
         angles = extract_angles(image_np)
         result = calculate_accuracy_and_mae(predicted_labels[0], angles, closet_matches)
-        # print(result)
+
         accuracy = result['Accuracy']
         rectifications = result['Rectification Messages']
         if predicted_class_confidence < 0.5:
             output_error = 'The pose is not recognizable'
             output_data = {
                 'response': output_error,
-                'Stroke': predicted_labels[0],  # Changed from set to list
+                'Stroke': predicted_labels[0], 
                 # 'Confidence Levels': {shot_type: confidence for shot_type, confidence in zip(clf.classes_, confidence_levels[0])},
                 'Highest Confidence Level': predicted_class_confidence
             }

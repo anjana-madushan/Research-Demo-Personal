@@ -1,11 +1,35 @@
 from flask import Flask, request, jsonify # type: ignore
 import numpy as np
 import cv2
-from utils.extract_angles import extract_distances, extract_angles
-from Accuracy_calculations.accuracy_checker import calculate_accuracy
+
+from distances_calculations.classification import extract_distances
 from utils.prediction import predict
 
 app = Flask(__name__)
+
+@app.route('/process_image', methods=['POST'])
+def extract_angles_endpoint():
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image provided'}), 400
+
+    image_file = request.files['image']
+    if image_file.filename == '':
+        return jsonify({'error': 'Empty file provided'}), 400
+
+    image_bytes = image_file.read()
+    nparr = np.frombuffer(image_bytes, np.uint8)
+    image_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    distances = extract_distances(image_np)
+
+    if distances is not None:
+        output_data = predict(distances, image_np)
+        return jsonify(output_data)
+    else:
+        return jsonify({'error': 'No poses detected in the image'}), 400
+
+if __name__ == '__main__': 
+    app.run(debug=True)  
 
 # @app.route('/process_image', methods=['POST'])
 # def extract_angles_endpoint():
@@ -37,27 +61,6 @@ app = Flask(__name__)
 #     else:
 #         return jsonify({'error': 'No poses detected in the image'}), 400
 
-@app.route('/process_image', methods=['POST'])
-def extract_angles_endpoint():
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image provided'}), 400
-
-    image_file = request.files['image']
-    if image_file.filename == '':
-        return jsonify({'error': 'Empty file provided'}), 400
-
-    image_bytes = image_file.read()
-    nparr = np.frombuffer(image_bytes, np.uint8)
-    image_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-    distances = extract_distances(image_np)
-
-    if distances is not None:
-        output_data = predict(distances, image_np)
-        return jsonify(output_data)
-    else:
-        return jsonify({'error': 'No poses detected in the image'}), 400
-
 # @app.route('/process_video', methods=['POST'])
 # def process_video():
 #     data = request.json
@@ -73,5 +76,3 @@ def extract_angles_endpoint():
 #     return jsonify({'message': 'Video processing completed'})
 
 # Run the Flask app
-if __name__ == '__main__': 
-    app.run(debug=True)  

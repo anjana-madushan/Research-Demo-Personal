@@ -24,8 +24,7 @@ def process_image_data(image_bytes, batsman_type):
     if distances is None:
         return None, "No poses detected in the image"
 
-    # Use extracted distances to do classification, 
-    # accuracy calculations and provide rectifications
+    # classification, accuracy calculations and provide rectifications
     predicted_stroke_data = predict(distances, image_np, batsman_type)
     
     return predicted_stroke_data

@@ -4,27 +4,8 @@ import numpy as np
 stats_directory = 'D:/SLIIT/Academic/YEAR 04/Research/Training/newData'
 
 def calculate_accuracy_and_mae(shot_type, input_angles, closet_matches, batsman_type):
-    # stats_files_for_batting_shots = {
-    #     'forward defence': 'forward_defence.csv',
-    #     'forward drive': 'forward_drive.csv',
-    #     'backfoot defence': 'backfoot_defence.csv',
-    #     'backfoot drive': 'backfoot_drive.csv'
-    # }
 
-    # if shot_type not in stats_files_for_batting_shots:
-    #     raise ValueError(f"Unknown batting shot: {shot_type}")
-
-    # stats_file = f'{stats_directory}/{stats_files_for_batting_shots[shot_type]}'
-    # stats_data = pd.read_csv(stats_file)
-
-    # Ensure closet_matches is a DataFrame
     closet_matches = pd.DataFrame(closet_matches)
-
-    # Compute averages and standard deviations for each angle column
-    # angle_columns = [col for col in stats_data.columns if 'angle' in col]
-    # print(angle_columns)
-    # matching_angles_data = closet_matches[angle_columns]
-    # print(matching_angles_data)
 
     mean_values = closet_matches.mean()
     std_values = closet_matches.std()

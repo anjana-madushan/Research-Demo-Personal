@@ -7,8 +7,7 @@ def calculate_distance(point1, point2):
 
 def extract_distances(image_np, batsman_type):
     mp_pose = mp.solutions.pose
-    print("Batsman type:", batsman_type)
-    print("Data type of batsman_type:", type(batsman_type))
+
     # Mapping of left and right landmarks based on batsman type
     landmark_mapping = {
         'right-hand': {
@@ -41,7 +40,7 @@ def extract_distances(image_np, batsman_type):
     
     # Get the correct mapping for the batsman type
     mapping = landmark_mapping[batsman_type]
-    print(mapping)
+    
     with mp_pose.Pose(static_image_mode=True, model_complexity=2, enable_segmentation=False, min_detection_confidence=0.35) as pose:
         image_rgb = cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB)
         results = pose.process(image_rgb)

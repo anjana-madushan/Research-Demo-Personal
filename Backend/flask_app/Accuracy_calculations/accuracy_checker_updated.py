@@ -19,7 +19,6 @@ def calculate_accuracy_and_mae(shot_type, input_angles, closet_matches, batsman_
 
     # Ensure closet_matches is a DataFrame
     closet_matches = pd.DataFrame(closet_matches)
-    print(closet_matches)
 
     # Compute averages and standard deviations for each angle column
     # angle_columns = [col for col in stats_data.columns if 'angle' in col]
@@ -31,7 +30,6 @@ def calculate_accuracy_and_mae(shot_type, input_angles, closet_matches, batsman_
     std_values = closet_matches.std()
 
     angle_columns = closet_matches.columns.tolist()
-    print(angle_columns)
     # Define deviation thresholds based on the standard deviations
     deviation_thresholds = {
         angle: (mean_values[angle], std_values[angle])
@@ -116,7 +114,6 @@ def generate_rectification_messages(rectification_needed_items, reference_angles
                                          f"Try to adjust it to reduce the minor deviation."),
                     'mathematical response': (f"Correct the angle to be closer to the reference value.")
                 }
-                print(message)
             else:
                 if input_value > reference_value:
                     direction = "too wide"
@@ -133,7 +130,6 @@ def generate_rectification_messages(rectification_needed_items, reference_angles
                                          f"{correction} to reduce the deviation."),
                     'mathematical response': (f"Adjust it to be within the acceptable range.")
                 }
-                print(message)
 
             rectifications.append(message)
 
@@ -142,7 +138,6 @@ def generate_rectification_messages(rectification_needed_items, reference_angles
 def map_angle_names(angle_name, batsman_type):
     if batsman_type == 'left-hand':
         # Swap right with left for left-hand batsmen
-        print('left_handed')
         angle_name = angle_name.replace('right_', 'temp_').replace('left_', 'right_').replace('temp_', 'left_')
-        print(angle_name)
+
     return angle_name

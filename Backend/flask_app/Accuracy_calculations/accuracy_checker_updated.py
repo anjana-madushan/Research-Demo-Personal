@@ -3,30 +3,35 @@ import numpy as np
 
 stats_directory = 'D:/SLIIT/Academic/YEAR 04/Research/Training/newData'
 
-def calculate_accuracy_and_mae(shot_type, input_angles, closet_matches):
-    stats_files_for_batting_shots = {
-        'forward defence': 'forward_defence.csv',
-        'forward drive': 'forward_drive.csv',
-        'backfoot defence': 'backfoot_defence.csv',
-        'backfoot drive': 'backfoot_drive.csv'
-    }
+def calculate_accuracy_and_mae(shot_type, input_angles, closet_matches, batsman_type):
+    # stats_files_for_batting_shots = {
+    #     'forward defence': 'forward_defence.csv',
+    #     'forward drive': 'forward_drive.csv',
+    #     'backfoot defence': 'backfoot_defence.csv',
+    #     'backfoot drive': 'backfoot_drive.csv'
+    # }
 
-    if shot_type not in stats_files_for_batting_shots:
-        raise ValueError(f"Unknown batting shot: {shot_type}")
+    # if shot_type not in stats_files_for_batting_shots:
+    #     raise ValueError(f"Unknown batting shot: {shot_type}")
 
-    stats_file = f'{stats_directory}/{stats_files_for_batting_shots[shot_type]}'
-    stats_data = pd.read_csv(stats_file)
+    # stats_file = f'{stats_directory}/{stats_files_for_batting_shots[shot_type]}'
+    # stats_data = pd.read_csv(stats_file)
 
     # Ensure closet_matches is a DataFrame
     closet_matches = pd.DataFrame(closet_matches)
+    print(closet_matches)
 
     # Compute averages and standard deviations for each angle column
-    angle_columns = [col for col in stats_data.columns if 'angle' in col]
-    matching_angles_data = closet_matches[angle_columns]
+    # angle_columns = [col for col in stats_data.columns if 'angle' in col]
+    # print(angle_columns)
+    # matching_angles_data = closet_matches[angle_columns]
+    # print(matching_angles_data)
 
-    mean_values = matching_angles_data.mean()
-    std_values = matching_angles_data.std()
+    mean_values = closet_matches.mean()
+    std_values = closet_matches.std()
 
+    angle_columns = closet_matches.columns.tolist()
+    print(angle_columns)
     # Define deviation thresholds based on the standard deviations
     deviation_thresholds = {
         angle: (mean_values[angle], std_values[angle])
@@ -39,11 +44,11 @@ def calculate_accuracy_and_mae(shot_type, input_angles, closet_matches):
         raise ValueError("No valid deviation thresholds available")
 
     # Use the updated deviation thresholds in the calculation
-    result = categorize_and_calculate_mae(input_angles, mean_values.to_dict(), deviation_thresholds)
+    result = categorize_and_calculate_mae(input_angles, mean_values.to_dict(), deviation_thresholds, batsman_type)
 
     return result
 
-def categorize_and_calculate_mae(input_angles, reference_angles, deviation_thresholds):
+def categorize_and_calculate_mae(input_angles, reference_angles, deviation_thresholds, batsman_type):
     absolute_deviations = []
     false_joints = {}
     incorrect_angles = {}
@@ -79,7 +84,8 @@ def categorize_and_calculate_mae(input_angles, reference_angles, deviation_thres
     rectifications = generate_rectification_messages(
         rectification_needed.items(),
         reference_angles,
-        deviation_thresholds
+        deviation_thresholds, 
+        batsman_type
     )
 
     result = {
@@ -90,23 +96,27 @@ def categorize_and_calculate_mae(input_angles, reference_angles, deviation_thres
     return result
 
 
-def generate_rectification_messages(rectification_needed_items, reference_angles, deviation_thresholds):
+def generate_rectification_messages(rectification_needed_items, reference_angles, deviation_thresholds, batsman_type):
     rectifications = []
 
     for angle_name, input_value in rectification_needed_items:
+        
+        mapped_angle_name = map_angle_names(angle_name, batsman_type)
+        
         if angle_name in reference_angles and angle_name in deviation_thresholds:
             reference_value = reference_angles[angle_name]
             accurate_threshold, minor_error_threshold = deviation_thresholds[angle_name]
 
             if abs(input_value - reference_value) <= minor_error_threshold:
                 message = {
-                    'angle name': angle_name,
+                    'angle name': mapped_angle_name,
                     'error type': 'minor error',
                     'current angle value': round(input_value),
                     'general response': (f"Your {angle_name} is slightly off. "
                                          f"Try to adjust it to reduce the minor deviation."),
                     'mathematical response': (f"Correct the angle to be closer to the reference value.")
                 }
+                print(message)
             else:
                 if input_value > reference_value:
                     direction = "too wide"
@@ -116,14 +126,23 @@ def generate_rectification_messages(rectification_needed_items, reference_angles
                     correction = "Make it wider"
                 
                 message = {
-                    'angle name': angle_name,
+                    'angle name': mapped_angle_name,
                     'error type': 'large error',
                     'current angle value': round(input_value),
                     'general response': (f"Your {angle_name} is {direction}. "
                                          f"{correction} to reduce the deviation."),
                     'mathematical response': (f"Adjust it to be within the acceptable range.")
                 }
+                print(message)
 
             rectifications.append(message)
 
     return rectifications
+
+def map_angle_names(angle_name, batsman_type):
+    if batsman_type == 'left-hand':
+        # Swap right with left for left-hand batsmen
+        print('left_handed')
+        angle_name = angle_name.replace('right_', 'temp_').replace('left_', 'right_').replace('temp_', 'left_')
+        print(angle_name)
+    return angle_name

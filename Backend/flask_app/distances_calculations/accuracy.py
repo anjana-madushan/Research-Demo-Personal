@@ -5,8 +5,45 @@ import cv2
 def calculate_distance(point1, point2):
     return np.linalg.norm(point1 - point2)
 
-def extract_accuracy_distances(image_np):
+def extract_accuracy_distances(image_np, batsman_type):
     mp_pose = mp.solutions.pose
+    
+    # Mapping of left and right landmarks based on batsman type
+    landmark_mapping = {
+        'right-hand': {
+            'LEFT_SHOULDER': mp_pose.PoseLandmark.LEFT_SHOULDER,
+            'RIGHT_SHOULDER': mp_pose.PoseLandmark.RIGHT_SHOULDER,
+            'LEFT_ELBOW': mp_pose.PoseLandmark.LEFT_ELBOW,
+            'RIGHT_ELBOW': mp_pose.PoseLandmark.RIGHT_ELBOW,
+            'LEFT_HIP': mp_pose.PoseLandmark.LEFT_HIP,
+            'RIGHT_HIP': mp_pose.PoseLandmark.RIGHT_HIP,
+            'LEFT_KNEE': mp_pose.PoseLandmark.LEFT_KNEE,
+            'RIGHT_KNEE': mp_pose.PoseLandmark.RIGHT_KNEE,
+            'LEFT_ANKLE': mp_pose.PoseLandmark.LEFT_ANKLE,
+            'RIGHT_ANKLE': mp_pose.PoseLandmark.RIGHT_ANKLE,
+            'RIGHT_WRIST': mp_pose.PoseLandmark.RIGHT_WRIST
+        },
+        'left-hand': {
+            'LEFT_SHOULDER': mp_pose.PoseLandmark.RIGHT_SHOULDER,
+            'RIGHT_SHOULDER': mp_pose.PoseLandmark.LEFT_SHOULDER,
+            'LEFT_ELBOW': mp_pose.PoseLandmark.RIGHT_ELBOW,
+            'RIGHT_ELBOW': mp_pose.PoseLandmark.LEFT_ELBOW,
+            'LEFT_HIP': mp_pose.PoseLandmark.RIGHT_HIP,
+            'RIGHT_HIP': mp_pose.PoseLandmark.LEFT_HIP,
+            'LEFT_KNEE': mp_pose.PoseLandmark.RIGHT_KNEE,
+            'RIGHT_KNEE': mp_pose.PoseLandmark.LEFT_KNEE,
+            'LEFT_ANKLE': mp_pose.PoseLandmark.RIGHT_ANKLE,
+            'RIGHT_ANKLE': mp_pose.PoseLandmark.LEFT_ANKLE,
+            'RIGHT_WRIST': mp_pose.PoseLandmark.LEFT_WRIST
+        }
+    }
+    
+    # Check if the batsman_type is valid
+    if batsman_type not in landmark_mapping:
+        raise ValueError(f"Unsupported batsman_type: {batsman_type}")
+    
+    # Get the correct mapping for the batsman type
+    mapping = landmark_mapping[batsman_type]
     
     with mp_pose.Pose(static_image_mode=True, model_complexity=2, enable_segmentation=False, min_detection_confidence=0.2) as pose:
         image_rgb = cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB)
@@ -16,42 +53,12 @@ def extract_accuracy_distances(image_np):
             landmarks = results.pose_world_landmarks.landmark
             
             # Extract keypoints
-            points = {
-                'LEFT_SHOULDER': np.array([landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x,
-                                           landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y,
-                                           landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].z]),
-                'RIGHT_SHOULDER': np.array([landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x,
-                                            landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y,
-                                            landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].z]),
-                'LEFT_ELBOW': np.array([landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].x,
-                                        landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].y,
-                                        landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].z]),
-                'RIGHT_ELBOW': np.array([landmarks[mp_pose.PoseLandmark.RIGHT_ELBOW.value].x,
-                                         landmarks[mp_pose.PoseLandmark.RIGHT_ELBOW.value].y,
-                                         landmarks[mp_pose.PoseLandmark.RIGHT_ELBOW.value].z]),
-                'LEFT_HIP': np.array([landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].x,
-                                      landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].y,
-                                      landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].z]),
-                'RIGHT_HIP': np.array([landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].x,
-                                       landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].y,
-                                       landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].z]),
-                'LEFT_KNEE': np.array([landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].x,
-                                       landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].y,
-                                       landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].z]),
-                'RIGHT_KNEE': np.array([landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].x,
-                                        landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].y,
-                                        landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].z]),
-                'LEFT_ANKLE': np.array([landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].x,
-                                        landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].y,
-                                        landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].z]),
-                'RIGHT_ANKLE': np.array([landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].x,
-                                         landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].y,
-                                         landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].z]),
-                'RIGHT_WRIST': np.array([landmarks[mp_pose.PoseLandmark.RIGHT_WRIST.value].x,
-                                         landmarks[mp_pose.PoseLandmark.RIGHT_WRIST.value].y,
-                                         landmarks[mp_pose.PoseLandmark.RIGHT_WRIST.value].z]),
-            }
-
+            points = {key: np.array([landmarks[landmark.value].x,
+                                    landmarks[landmark.value].y,
+                                    landmarks[landmark.value].z])
+                      for key, landmark in mapping.items()}
+                
+            # Compute distances between keypoints
             distances = {              
                 'left_shoulder_right_shoulder': calculate_distance(points['LEFT_SHOULDER'], points['RIGHT_SHOULDER']),
                 'right_shoulder_right_elbow': calculate_distance(points['RIGHT_SHOULDER'], points['RIGHT_ELBOW']),
@@ -60,7 +67,6 @@ def extract_accuracy_distances(image_np):
                 'right_hip_right_knee': calculate_distance(points['RIGHT_HIP'], points['RIGHT_KNEE']),
                 'right_knee_right_ankle': calculate_distance(points['RIGHT_KNEE'], points['RIGHT_ANKLE']),
             }
-            
             
             return distances
         else:

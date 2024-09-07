@@ -9,7 +9,7 @@ from utils.prediction import predict
 app = Flask(__name__)
 CORS(app)
 
-def process_image_data(image_bytes):
+def process_image_data(image_bytes, batsman_type):
     
     # Convert the image bytes to a numpy array
     nparr = np.frombuffer(image_bytes, np.uint8)
@@ -18,7 +18,7 @@ def process_image_data(image_bytes):
     image_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
     # Extract distances between landmarks 
-    distances = extract_distances(image_np)
+    distances = extract_distances(image_np, batsman_type)
 
     # Check if distances were extracted successfully
     if distances is None:
@@ -26,7 +26,7 @@ def process_image_data(image_bytes):
 
     # Use extracted distances to do classification, 
     # accuracy calculations and provide rectifications
-    predicted_stroke_data = predict(distances, image_np)
+    predicted_stroke_data = predict(distances, image_np, batsman_type)
     
     return predicted_stroke_data
 
@@ -34,9 +34,13 @@ def process_image_data(image_bytes):
 def upload_image():
     if 'image' not in request.files:
         return jsonify({"error": "No image file provided"}), 400
-    
+    # print(request.form['type'])
     image_file = request.files['image']
+    batsman_type = request.form['type']
     
+    if 'type' not in request.form:
+        return jsonify({"error": "Enter the batsman type"}), 400
+
     if image_file.filename == '':
         return jsonify({"error": "No image selected"}), 400
     
@@ -45,7 +49,7 @@ def upload_image():
         image_bytes = image_file.read()
 
         # Process the image
-        output_data = process_image_data(image_bytes)
+        output_data = process_image_data(image_bytes, batsman_type)
         
         # Return the result
         return jsonify(output_data), 200

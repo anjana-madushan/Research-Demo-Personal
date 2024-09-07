@@ -11,7 +11,7 @@ clf = joblib.load(r'd:\\SLIIT\\Academic\\YEAR 04\\Research\\Training\\New-traine
 # Load the MinMaxScaler
 scaler = joblib.load(r'D:\\SLIIT\\Academic\\YEAR 04\\Research\\ModelTraining\\New_scalers\\min_max_scaler.pkl')
 
-def predict(features, image_np):
+def predict(features, image_np, batsman_type):
     try:
         # Convert the dictionary into a DataFrame with a single row
         df = pd.DataFrame([features])
@@ -26,11 +26,11 @@ def predict(features, image_np):
 
         # Get the confidence level for the predicted class
         predicted_class_confidence = max(confidence_levels[0])
-        accuracy_distances = extract_accuracy_distances(image_np)
+        accuracy_distances = extract_accuracy_distances(image_np, batsman_type)
         closet_matches = find_closest_match(accuracy_distances, predicted_labels[0])
 
-        angles = extract_angles(image_np)
-        result = calculate_accuracy_and_mae(predicted_labels[0], angles, closet_matches)
+        angles = extract_angles(image_np, batsman_type)
+        result = calculate_accuracy_and_mae(predicted_labels[0], angles, closet_matches, batsman_type)
 
         accuracy = result['Accuracy']
         rectifications = result['Rectification Messages']

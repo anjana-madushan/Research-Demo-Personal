@@ -37,6 +37,9 @@ def upload_image():
     image_file = request.files['image']
     batsman_type = request.form['type']
     
+    print(request.files)
+    print(request.form)
+
     if 'type' not in request.form:
         return jsonify({"error": "Enter the batsman type"}), 400
 

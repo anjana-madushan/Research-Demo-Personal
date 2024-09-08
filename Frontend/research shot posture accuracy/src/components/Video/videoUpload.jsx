@@ -1,32 +1,62 @@
 import { useState, useRef } from "react";
-import { Button, Typography, Box, CircularProgress, Select, MenuItem, FormControl, InputLabel } from "@mui/material";
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import PauseIcon from '@mui/icons-material/Pause';
-import { ShotClassification } from "../Outputs/shotClassification";
+import {
+  Button,
+  Typography,
+  Box,
+  CircularProgress,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Card,
+  CardMedia,
+  CardContent,
+  ButtonGroup
+} from "@mui/material";
 import axios from "axios";
-import { styled } from "@mui/material";
-
-const UploadButton = styled(Button)({
-  marginRight: "8px",
-});
 
 const VideoUpload = () => {
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState('');
   const [fileName, setFileName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [batsmanType, setBatsmanType] = useState(''); // New state for batsman type
+  const [batsmanType, setBatsmanType] = useState('');
+  const [accuracy, setAccuracy] = useState(null);
+  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(0.25);
   const videoRef = useRef(null);
+  const fileInputRef = useRef(null);
 
-  const handleFileChange = (event) => {
+  const handleFileUploadChange = (event) => {
     const selectedFile = event.target.files[0];
-    setFile(selectedFile);
-    setFileName(selectedFile ? selectedFile.name : '');
+    if (selectedFile) {
+      setFile(selectedFile);
+      setFileName(selectedFile.name);
+      setIsLoading(true);
+      setIsVideoLoaded(false);
 
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 3000);
+      if (videoRef.current) {
+        const videoUrl = URL.createObjectURL(selectedFile);
+        videoRef.current.src = videoUrl;
+        videoRef.current.playbackRate = 0.25;
+        videoRef.current.muted = true;
+        videoRef.current.load();
+      }
+    }
+  };
+
+  const handleFileUploadClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handlePlaybackSpeedChange = (event) => {
+    const speed = event.target.value;
+    setPlaybackSpeed(speed);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = speed;
+    }
   };
 
   const handleBatsmanTypeChange = (event) => {
@@ -34,7 +64,7 @@ const VideoUpload = () => {
   };
 
   const captureFrame = async () => {
-    if (!videoRef.current) return;
+    if (!videoRef.current || !isVideoLoaded) return;
 
     const canvas = document.createElement('canvas');
     canvas.width = videoRef.current.videoWidth;
@@ -47,11 +77,11 @@ const VideoUpload = () => {
 
     const formData = new FormData();
     formData.append("image", blob, "frame.png");
-    formData.append("batsmanType", batsmanType); // Append batsman type to the form data
+    formData.append("type", batsmanType);
 
     try {
       const response = await axios.post(
-        "http://localhost:8070/api/upload/image",
+        "http://127.0.0.1:5000/api/upload/image",
         formData,
         {
           headers: {
@@ -59,127 +89,117 @@ const VideoUpload = () => {
           },
         }
       );
-      const predictedLabel = response.data.data.predicted_labels['Performed shot is'];
-      setMessage(predictedLabel);
-      console.log(response.data);
-      console.log(response)
+
+      const batting_stroke = response.data['Stroke'];
+      const accuracy_level = parseInt(response.data['accuracy'], 10);
+      setMessage(batting_stroke);
+      setAccuracy(accuracy_level);
     } catch (error) {
       console.log(error);
     }
   };
 
   const handleVideoLoadedMetadata = () => {
-    if (videoRef.current) {
-      videoRef.current.play();
-      videoRef.current.playbackRate = 0.25;
-    }
+    setIsLoading(false);
+    setIsVideoLoaded(true);
   };
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 2,
-      }}
-    >
-      <input
-        type="file"
-        accept="video/*"
-        onChange={handleFileChange}
-        id="contained-button-file"
-        style={{ display: "none" }}
-      />
-      {!file && (
-        <label htmlFor="contained-button-file">
-          <UploadButton variant="contained" component="span">
-            Choose Video
-          </UploadButton>
-        </label>
-      )}
-      {message && <ShotClassification message={message} />}
-      {fileName && <Typography>{fileName}</Typography>}
-      <Box sx={{ position: 'relative', maxWidth: 700 }}>
-        {isLoading ? (
-          <Box
-            sx={{
-              position: 'absolute',
-              top: -2,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              backgroundColor: 'rgba(255, 255, 255, 0.5)',
-              zIndex: 9999,
-            }}
-          >
-            <CircularProgress />
-          </Box>
-        ) : null}
-        {file && (
-          <video
-            ref={videoRef}
-            src={URL.createObjectURL(file)}
-            controls={false}
-            autoPlay
-            muted
-            width="100%"
-            onLoadedMetadata={handleVideoLoadedMetadata}
-            style={{ visibility: isLoading ? 'hidden' : 'visible' }} // Hide video while loading
+    <Box display="flex" flexDirection="column" alignItems="center" padding={4}>
+      <Card sx={{ maxWidth: 600, boxShadow: 3, marginBottom: 3 }}>
+        <CardMedia
+          component="video"
+          controls
+          ref={videoRef}
+          onLoadedMetadata={handleVideoLoadedMetadata}
+          sx={{ height: 350 }}
+          muted
+          controlsList="nodownload noplaybackrate"
+          disablePictureInPicture
+        >
+          {file && (
+            <source
+              src={URL.createObjectURL(file)}
+              type={file.type}
+            />
+          )}
+        </CardMedia>
+        <CardContent>
+          <input
+            type="file"
+            accept="video/mp4, video/quicktime"
+            onChange={handleFileUploadChange}
+            ref={fileInputRef}
+            style={{ display: 'none' }}
           />
-        )}
-        {file && (
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              marginTop: 1,
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <Button
-              onClick={() => {
-                if (!videoRef.current.paused) {
-                  videoRef.current.pause();
-                } else {
-                  videoRef.current.play();
-                }
-              }}
-              style={{ backgroundColor: "transparent", cursor: "pointer" }}
-            >
-              {videoRef.current && !videoRef.current.paused ? (
-                <PauseIcon />
-              ) : (
-                <PlayArrowIcon />
-              )}
-            </Button>
-            <Button
-              variant="contained"
-              onClick={captureFrame}
-              sx={{ marginTop: 1 }}
-            >
-              Select Frame
-            </Button>
-            {/* Dropdown menu for selecting batsman type */}
-            <FormControl variant="outlined" sx={{ marginTop: 2, minWidth: 120 }}>
-              <InputLabel id="batsman-type-label">Batsman Type</InputLabel>
-              <Select
-                labelId="batsman-type-label"
-                value={batsmanType}
-                onChange={handleBatsmanTypeChange}
-                label="Batsman Type"
-              >
-                <MenuItem value="Right-Handed">Right-Handed</MenuItem>
-                <MenuItem value="Left-Handed">Left-Handed</MenuItem>
-              </Select>
-            </FormControl>
+          <Box sx={{ marginTop: 2, marginBottom: 2 }}>
+            <Typography variant="overline" sx={{ marginBottom: 0.5 }}>Playback Speed</Typography>
+            <ButtonGroup sx={{ gap: 5, display: 'flex', justifyContent: 'center' }} disabled={!isVideoLoaded}>
+              <Button onClick={() => handlePlaybackSpeedChange({ target: { value: 0.25 } })}
+                variant={playbackSpeed === 0.25 ? 'contained' : 'text'}>0.25x</Button>
+              <Button onClick={() => handlePlaybackSpeedChange({ target: { value: 0.5 } })}
+                variant={playbackSpeed === 0.50 ? 'contained' : 'text'}>0.50x</Button>
+              <Button onClick={() => handlePlaybackSpeedChange({ target: { value: 0.75 } })}
+                variant={playbackSpeed === 0.75 ? 'contained' : 'text'}>0.75x</Button>
+              <Button onClick={() => handlePlaybackSpeedChange({ target: { value: 1.0 } })}
+                variant={playbackSpeed === 1.0 ? 'contained' : 'text'}>1x</Button>
+            </ButtonGroup>
           </Box>
-        )}
-      </Box>
+          <Button
+            variant="contained"
+            fullWidth
+            onClick={handleFileUploadClick}
+            sx={{ marginBottom: 2, background: 'linear-gradient(90deg, #8e44ad, #c0392b)' }}
+          >
+            Upload Video
+          </Button>
+
+          {fileName && <Typography variant="body1">{fileName}</Typography>}
+          {message && <Typography variant="h6" color="primary">{message}</Typography>}
+
+          {accuracy !== null && (
+            <Box position="relative" display="inline-flex" sx={{ marginY: 2 }}>
+              <CircularProgress size={60} variant="determinate" value={accuracy} />
+              <Box
+                top={0}
+                left={0}
+                bottom={0}
+                right={0}
+                position="absolute"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+              >
+                <Typography variant="caption" component="div" color="textSecondary">
+                  {`${accuracy}%`}
+                </Typography>
+              </Box>
+            </Box>
+          )}
+
+          <Button
+            variant="contained"
+            fullWidth
+            onClick={captureFrame}
+            disabled={!isVideoLoaded}
+            sx={{ marginBottom: 2 }}
+          >
+            Select Frame
+          </Button>
+
+          <FormControl fullWidth disabled={!isVideoLoaded}>
+            <InputLabel>Batsman Type</InputLabel>
+            <Select
+              value={batsmanType}
+              onChange={handleBatsmanTypeChange}
+              label="Batsman Type"
+            >
+              <MenuItem value="right-hand">Right-Handed</MenuItem>
+              <MenuItem value="left-hand">Left-Handed</MenuItem>
+            </Select>
+          </FormControl>
+        </CardContent>
+      </Card>
     </Box>
   );
 };

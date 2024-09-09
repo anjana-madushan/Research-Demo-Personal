@@ -25,12 +25,13 @@ const VideoUpload = () => {
   const [message, setMessage] = useState('');
   const [fileName, setFileName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [batsmanType, setBatsmanType] = useState('');
+  const [batsmanType, setBatsmanType] = useState(null);
   const [accuracy, setAccuracy] = useState(null);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(0.25);
   const [rectifications, setRectifications] = useState([]);
   const [hasClassification, setHasClassification] = useState(false);
+  const [battingStroke, setBattingStroke] = useState(null);
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -70,6 +71,10 @@ const VideoUpload = () => {
     setBatsmanType(event.target.value);
   };
 
+  const handleBattingStrokeChange = (event) => {
+    setBattingStroke(event.target.value);
+  };
+
   const captureFrame = async () => {
     if (!videoRef.current || !isVideoLoaded) return;
 
@@ -85,6 +90,10 @@ const VideoUpload = () => {
     const formData = new FormData();
     formData.append("image", blob, "frame.png");
     formData.append("type", batsmanType);
+    formData.append("classify", hasClassification);
+    formData.append("stroke", battingStroke);
+
+    console.log(battingStroke, hasClassification)
 
     try {
       const response = await axios.post(
@@ -96,13 +105,12 @@ const VideoUpload = () => {
           },
         }
       );
-
+      console.log(response.data)
       const batting_stroke = response.data['Stroke'];
       const accuracy_level = parseInt(response.data['accuracy'], 10);
       const rectifications = response.data['rectifications'];
       setMessage(batting_stroke);
       setAccuracy(accuracy_level);
-      console.log(response.data['rectifications'])
       setRectifications(rectifications)
     } catch (error) {
       console.log(error);
@@ -167,7 +175,7 @@ const VideoUpload = () => {
                 </ButtonGroup>
               </Box>
               {fileName && <Typography variant="body1">{fileName}</Typography>}
-              <FormControl>
+              <FormControl disabled={!isVideoLoaded}>
                 <FormLabel id="demo-row-radio-buttons-group-label">Classification Needed</FormLabel>
                 <RadioGroup
                   row
@@ -182,7 +190,7 @@ const VideoUpload = () => {
               </FormControl>
               <Grid container spacing={2} alignItems="center" sx={{ marginBottom: 1.0 }}>
                 <Grid item xs={12} md={6}>
-                  <FormControl fullWidth>
+                  <FormControl fullWidth disabled={!isVideoLoaded}>
                     <InputLabel>Batsman Type</InputLabel>
                     <Select
                       value={batsmanType}
@@ -195,17 +203,17 @@ const VideoUpload = () => {
                   </FormControl>
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <FormControl fullWidth disabled={hasClassification}>
+                  <FormControl fullWidth disabled={hasClassification || !isVideoLoaded}>
                     <InputLabel>Batting Stroke</InputLabel>
                     <Select
-                      // value={newSelection}
-                      // onChange={handleNewSelectionChange}
+                      value={battingStroke}
+                      onChange={handleBattingStrokeChange}
                       label="Batting Stroke"
                     >
-                      <MenuItem value="fd">Forward Defence</MenuItem>
-                      <MenuItem value="fdr">Forward Drive</MenuItem>
-                      <MenuItem value="bd">Backfoot Defence</MenuItem>
-                      <MenuItem value="bdr">Backfoot Drive</MenuItem>
+                      <MenuItem value="forward defence">Forward Defence</MenuItem>
+                      <MenuItem value="forward drive">Forward Drive</MenuItem>
+                      <MenuItem value="backfoot defence">Backfoot Defence</MenuItem>
+                      <MenuItem value="backfoot drive">Backfoot Drive</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -214,7 +222,9 @@ const VideoUpload = () => {
                 variant="contained"
                 fullWidth
                 onClick={captureFrame}
-                disabled={!isVideoLoaded}
+                disabled={!isVideoLoaded ||
+                  batsmanType === null ||
+                  (!hasClassification && battingStroke === null)}
                 sx={{ marginBottom: 2 }}
               >
                 Select Frame

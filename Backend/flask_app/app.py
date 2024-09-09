@@ -4,12 +4,12 @@ import cv2
 from flask_cors import CORS
 
 from distances_calculations.classification import extract_distances
-from utils.prediction import predict
+from utils.prediction import predict, rectification_process
 
 app = Flask(__name__)
 CORS(app)
 
-def process_image_data(image_bytes, batsman_type):
+def process_image_data(image_bytes, batsman_type, has_classification, stroke):
     
     # Convert the image bytes to a numpy array
     nparr = np.frombuffer(image_bytes, np.uint8)
@@ -17,15 +17,20 @@ def process_image_data(image_bytes, batsman_type):
     # Convert numpy array into an OpenCV image
     image_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
+    if isinstance(has_classification, str):
+        has_classification = has_classification.lower() == 'true'
+
     # Extract distances between landmarks 
-    distances = extract_distances(image_np, batsman_type)
+    if has_classification:
+        distances = extract_distances(image_np, batsman_type)
 
-    # Check if distances were extracted successfully
-    if distances is None:
-        return None, "No poses detected in the image"
-
-    # classification, accuracy calculations and provide rectifications
-    predicted_stroke_data = predict(distances, image_np, batsman_type)
+        # Check if distances were extracted successfully
+        if distances is None:
+          return None, "No poses detected in the image"
+        # classification, accuracy calculations and provide rectifications
+        predicted_stroke_data = predict(distances, image_np, batsman_type)
+    else:
+        predicted_stroke_data = rectification_process(image_np, batsman_type, stroke)
     
     return predicted_stroke_data
 
@@ -35,13 +40,20 @@ def upload_image():
         return jsonify({"error": "No image file provided"}), 400
     # print(request.form['type'])
     image_file = request.files['image']
-    batsman_type = request.form['type']
+
+    if 'stroke' in request.form:
+        stroke = request.form['stroke']
     
     print(request.files)
     print(request.form)
 
+    if 'classify' not in request.form:
+        return jsonify({"error": "Enter the classification status"}), 400
+
     if 'type' not in request.form:
         return jsonify({"error": "Enter the batsman type"}), 400
+    batsman_type = request.form['type']
+    has_classification = request.form['classify']
 
     if image_file.filename == '':
         return jsonify({"error": "No image selected"}), 400
@@ -51,7 +63,7 @@ def upload_image():
         image_bytes = image_file.read()
 
         # Process the image
-        output_data = process_image_data(image_bytes, batsman_type)
+        output_data = process_image_data(image_bytes, batsman_type, has_classification, stroke)
         
         # Return the result
         return jsonify(output_data), 200

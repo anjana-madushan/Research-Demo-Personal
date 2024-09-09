@@ -57,3 +57,27 @@ def predict(features, image_np, batsman_type):
         }
 
     return output_data
+
+
+def rectification_process(image_np, batsman_type, stroke):
+    try:
+        accuracy_distances = extract_accuracy_distances(image_np, batsman_type)
+        closet_matches = find_closest_match(accuracy_distances, stroke)
+
+        angles = extract_angles(image_np, batsman_type)
+        result = calculate_accuracy_and_mae(stroke, angles, closet_matches, batsman_type)
+
+        accuracy = result['Accuracy']
+        rectifications = result['Rectification Messages']
+        output_data = {
+                'accuracy':f'{accuracy}%',
+                'rectifications':rectifications,
+                'Stroke': stroke
+            }
+
+    except Exception as e:
+        output_data = {
+            'error': str(e)
+        }
+
+    return output_data

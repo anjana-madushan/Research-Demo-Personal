@@ -64,7 +64,8 @@ def categorize_and_calculate_mae(input_angles, reference_angles, deviation_thres
         rectification_needed.items(),
         reference_angles,
         deviation_thresholds, 
-        batsman_type
+        batsman_type,
+        input_angles
     )
 
     result = {
@@ -75,8 +76,20 @@ def categorize_and_calculate_mae(input_angles, reference_angles, deviation_thres
     return result
 
 
-def generate_rectification_messages(rectification_needed_items, reference_angles, deviation_thresholds, batsman_type):
+def generate_rectification_messages(rectification_needed_items, reference_angles, deviation_thresholds, batsman_type, input_angles):
     rectifications = []
+
+    neighboring_joints = {
+        'angle_right_elbow': ['RIGHT SHOULDER', 'RIGHT WRIST'],
+        'angle_left_elbow': ['LEFT SHOULDER', 'LEFT WRIST'],
+        'angle_right_shoulder': ['RIGHT HIP', 'RIGHT SHOULDER'],
+        'angle_left_knee': ['LEFT HIP', 'LEFT ANKLE'],
+        'angle_right_knee': ['RIGHT HIP', 'RIGHT ANKLE'],
+        'angle_right_hip_knee': ['RIGHT KNEE', 'LEFT HIP'],
+        'angle_right_hip_shoulder': ['RIGHT_KNEE', 'RIGHT SHOULDER'],
+        'angle_right_shank': ['RIGHT ANKLE', 'LEFT ANKLE'],
+        'angle_left_shank': ['LEFT ANKLE', 'RIGHT ANKLE']
+    }
 
     for angle_name, input_value in rectification_needed_items:
         
@@ -86,33 +99,66 @@ def generate_rectification_messages(rectification_needed_items, reference_angles
             reference_value = reference_angles[angle_name]
             accurate_threshold, minor_error_threshold = deviation_thresholds[angle_name]
 
-            if abs(input_value - reference_value) <= minor_error_threshold:
-                message = {
-                    'angle name': mapped_angle_name,
-                    'error type': 'minor error',
-                    'current angle value': round(input_value),
-                    'general response': (f"Your {angle_name} is slightly off. "
-                                         f"Try to adjust it to reduce the minor deviation."),
-                    'mathematical response': (f"Correct the angle to be closer to the reference value.")
-                }
-            else:
+            error = abs(input_value - reference_value)
+
+            if error > minor_error_threshold:
+                error_type = "large error"
                 if input_value > reference_value:
-                    direction = "too wide"
-                    correction = "Make it narrower"
+                    error_description = "too wide"
                 else:
-                    direction = "too narrow"
-                    correction = "Make it wider"
-                
-                message = {
-                    'angle name': mapped_angle_name,
-                    'error type': 'large error',
-                    'current angle value': round(input_value),
-                    'general response': (f"Your {angle_name} is {direction}. "
-                                         f"{correction} to reduce the deviation."),
-                    'mathematical response': (f"Adjust it to be within the acceptable range.")
-                }
+                    error_description = "too narrow"
+            else:
+                error_type = "minor error"
+                if abs(input_value - reference_value) < accurate_threshold:
+                    error_description = "narrow"
+                else:
+                    error_description = "wide"
+
+            lower_bound = round(reference_value - minor_error_threshold)
+            upper_bound = round(reference_value + minor_error_threshold)
+            acceptable_range = f"{lower_bound}° to {upper_bound}°"
+            
+            # Provide feedback based on neighboring joints
+            neighbors = neighboring_joints.get(angle_name, [])
+            print(neighbors)
+            # feedback = check_neighboring_joints(angle_name, input_angles, neighbors)
+
+            message = {
+                'angle name': mapped_angle_name,
+                'current angle value': round(input_value),
+                'acceptable range': acceptable_range,
+                'error type': error_type,
+                'error description': error_description,
+                'neighboring joints to change': neighbors
+            }
 
             rectifications.append(message)
+
+            # if abs(input_value - reference_value) <= minor_error_threshold:
+            #     message = {
+            #         'angle name': mapped_angle_name,
+            #         'error type': 'minor error',
+            #         'current angle value': round(input_value),
+            #         'general response': (f"Your {angle_name} is slightly off. "
+            #                              f"Try to adjust it to reduce the minor deviation."),
+            #         'mathematical response': (f"Correct the angle to be closer to the reference value.")
+            #     }
+            # else:
+            #     if input_value > reference_value:
+            #         direction = "too wide"
+            #         correction = "Make it narrower"
+            #     else:
+            #         direction = "too narrow"
+            #         correction = "Make it wider"
+                
+            #     message = {
+            #         'angle name': mapped_angle_name,
+            #         'error type': 'large error',
+            #         'current angle value': round(input_value),
+            #         'general response': (f"Your {angle_name} is {direction}. "
+            #                              f"{correction} to reduce the deviation."),
+            #         'mathematical response': (f"Adjust it to be within the acceptable range.")
+            #     }
 
     return rectifications
 
@@ -122,3 +168,13 @@ def map_angle_names(angle_name, batsman_type):
         angle_name = angle_name.replace('right_', 'temp_').replace('left_', 'right_').replace('temp_', 'left_')
 
     return angle_name
+
+def check_neighboring_joints(angle_name, input_angles, neighbors):
+    # Limit feedback to the first 2 neighboring joints
+    feedback = []
+    for neighbor in neighbors[:2]:  # Take only the first 2 neighbors
+        if neighbor in input_angles:
+            print('neigbour', neighbor)
+            feedback.append(neighbor)
+    
+    return feedback

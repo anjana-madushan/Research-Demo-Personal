@@ -34,6 +34,8 @@ def predict(features, image_np, batsman_type):
 
         accuracy = result['Accuracy']
         rectifications = result['Rectification Messages']
+        correct_angles = result['Correct Angles']
+
         if predicted_class_confidence < 0.5:
             output_error = 'The pose is not recognizable'
             output_data = {
@@ -45,6 +47,7 @@ def predict(features, image_np, batsman_type):
         else:
             output_data = {
                 'accuracy':f'{accuracy}%',
+                'correct_angles':correct_angles,
                 'rectifications':rectifications,
                 'Stroke': predicted_labels[0],
                 # 'Confidence Levels': {shot_type: confidence for shot_type, confidence in zip(clf.classes_, confidence_levels[0])},
@@ -69,8 +72,10 @@ def rectification_process(image_np, batsman_type, stroke):
 
         accuracy = result['Accuracy']
         rectifications = result['Rectification Messages']
+        correct_angles = result['Correct Angles']
         output_data = {
                 'accuracy':f'{accuracy}%',
+                'correct_angles':correct_angles,
                 'rectifications':rectifications,
                 'Stroke': stroke
             }

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Button,
   Typography,
@@ -30,10 +30,12 @@ const VideoUpload = () => {
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(0.25);
   const [rectifications, setRectifications] = useState([]);
+  const [correctAngles, setCorrectAngles] = useState([]);
   const [hasClassification, setHasClassification] = useState(false);
   const [battingStroke, setBattingStroke] = useState(null);
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
+  const rectificationsRef = useRef(null);
 
   const handleFileUploadChange = (event) => {
     const selectedFile = event.target.files[0];
@@ -109,9 +111,11 @@ const VideoUpload = () => {
       const batting_stroke = response.data['Stroke'];
       const accuracy_level = parseInt(response.data['accuracy'], 10);
       const rectifications = response.data['rectifications'];
+      const correctAnglesList = response.data['correct_angles']
       setMessage(batting_stroke);
       setAccuracy(accuracy_level);
-      setRectifications(rectifications)
+      setRectifications(rectifications);
+      setCorrectAngles(correctAnglesList);
     } catch (error) {
       console.log(error);
     }
@@ -121,6 +125,12 @@ const VideoUpload = () => {
     setIsLoading(false);
     setIsVideoLoaded(true);
   };
+
+  useEffect(() => {
+    if (accuracy !== null && rectificationsRef.current) {
+      rectificationsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [accuracy]);
 
   return (
     <Box display="flex" flexDirection="column" alignItems="center" padding={4}>
@@ -229,11 +239,20 @@ const VideoUpload = () => {
           </Button>
         </CardContent>
       </Card>
-      {accuracy && (
-        <Box>
-          <Rectifications rectifications={rectifications} stroke={message} accuracy={accuracy} />
-        </Box>
-      )}
+      <Box
+        ref={rectificationsRef} // Attach the ref here
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        padding={4}
+        width="100%"
+      >
+        {accuracy && (
+          <Box>
+            <Rectifications rectifications={rectifications} stroke={message} accuracy={accuracy} correctAngles={correctAngles} />
+          </Box>
+        )}
+      </Box>
     </Box>
   );
 };

@@ -33,11 +33,13 @@ def categorize_and_calculate_mae(input_angles, reference_angles, deviation_thres
     incorrect_angles = {}
     rectification_needed = {}
     correctness = []
+    correct_angles = []
 
     total_error = 0
     count = 0
 
     for angle, input_value in input_angles.items():
+        correct_angle_name = correct_angle_name_converter(angle, batsman_type)
         if angle in reference_angles:
             reference_value = reference_angles[angle]
             accurate_threshold, minor_error_threshold = deviation_thresholds.get(angle, (float('inf'), float('inf')))
@@ -46,6 +48,8 @@ def categorize_and_calculate_mae(input_angles, reference_angles, deviation_thres
 
             if error <= minor_error_threshold and abs(input_value)<abs(accurate_threshold):
                 correctness.append(100)
+                correct_angles.append(correct_angle_name)
+                print(correct_angles)
             elif error >= minor_error_threshold and error < 2*minor_error_threshold:
                 absolute_deviations.append(error)
                 false_joints[angle] = input_value
@@ -70,7 +74,8 @@ def categorize_and_calculate_mae(input_angles, reference_angles, deviation_thres
 
     result = {
         'Accuracy': mae_percentage,
-        'Rectification Messages': rectifications
+        'Rectification Messages': rectifications,
+        'Correct Angles': correct_angles 
     }
 
     return result
@@ -86,14 +91,16 @@ def generate_rectification_messages(rectification_needed_items, reference_angles
         'angle_left_knee': ['LEFT HIP', 'LEFT ANKLE'],
         'angle_right_knee': ['RIGHT HIP', 'RIGHT ANKLE'],
         'angle_right_hip_knee': ['RIGHT KNEE', 'LEFT HIP'],
-        'angle_right_hip_shoulder': ['RIGHT_KNEE', 'RIGHT SHOULDER'],
-        'angle_right_shank': ['RIGHT ANKLE', 'LEFT ANKLE'],
-        'angle_left_shank': ['LEFT ANKLE', 'RIGHT ANKLE']
+        'angle_left_hip_knee':['LEFT KNEE', 'RIGHT HIP'],
+        'angle_right_hip_shoulder': ['RIGHT KNEE', 'RIGHT SHOULDER'],
+        'angle_right_shank': ['RIGHT ANKLE', 'RIGHT KNEE'],
+        'angle_left_shank': ['LEFT ANKLE', 'LEFT KNEE']
     }
 
     for angle_name, input_value in rectification_needed_items:
         
-        mapped_angle_name = map_angle_names(angle_name, batsman_type)
+        # mapped_angle_name = map_angle_names(angle_name, batsman_type)
+        correct_angle_name = correct_angle_name_converter(angle_name, batsman_type)
         
         if angle_name in reference_angles and angle_name in deviation_thresholds:
             reference_value = reference_angles[angle_name]
@@ -116,20 +123,31 @@ def generate_rectification_messages(rectification_needed_items, reference_angles
 
             lower_bound = round(reference_value - minor_error_threshold)
             upper_bound = round(reference_value + minor_error_threshold)
-            acceptable_range = f"{lower_bound}° to {upper_bound}°"
+            acceptable_range = f"{lower_bound} to {upper_bound}"
             
             # Provide feedback based on neighboring joints
             neighbors = neighboring_joints.get(angle_name, [])
-            print(neighbors)
             # feedback = check_neighboring_joints(angle_name, input_angles, neighbors)
 
+            if error_description == "narrow" or error_description == "too narrow":
+                correct_action = "Widen"
+            elif error_description == "wide" or error_description == "too wide":
+                correct_action = "Narrow"
+            elif (error_description == "wide" or error_description == "too wide") and (correct_angle_name == 'Right Shank' or correct_angle_name == 'Right Shank'):
+                correct_action = f"Move forword your {neighbors[1]}"
+            elif error_description == "narrow" or error_description == "too narrow" and (correct_angle_name == 'Right Shank' or correct_angle_name == 'Right Shank'):
+                correct_action = f"Move backward your {neighbors[1]}"
+            else:
+                correct_action = "adjust"
+
             message = {
-                'angle name': mapped_angle_name,
+                'angle name': correct_angle_name,
                 'current angle value': round(input_value),
                 'acceptable range': acceptable_range,
                 'error type': error_type,
                 'error description': error_description,
-                'neighboring joints to change': neighbors
+                'neighboring joints to change':f'{neighbors[0]} & {neighbors[1]}',
+                'action': f'{correct_action} the angle'
             }
 
             rectifications.append(message)
@@ -162,12 +180,12 @@ def generate_rectification_messages(rectification_needed_items, reference_angles
 
     return rectifications
 
-def map_angle_names(angle_name, batsman_type):
-    if batsman_type == 'left-hand':
-        # Swap right with left for left-hand batsmen
-        angle_name = angle_name.replace('right_', 'temp_').replace('left_', 'right_').replace('temp_', 'left_')
+# def map_angle_names(angle_name, batsman_type):
+#     if batsman_type == 'left-hand':
+#         # Swap right with left for left-hand batsmen
+#         angle_name = angle_name.replace('right_', 'temp_').replace('left_', 'right_').replace('temp_', 'left_')
 
-    return angle_name
+#     return angle_name
 
 def check_neighboring_joints(angle_name, input_angles, neighbors):
     # Limit feedback to the first 2 neighboring joints
@@ -178,3 +196,23 @@ def check_neighboring_joints(angle_name, input_angles, neighbors):
             feedback.append(neighbor)
     
     return feedback
+
+def correct_angle_name_converter(angle_name, batsman_type):
+    angle_name_mapping = {
+        'angle_right_elbow': 'Right Elbow',
+        'angle_left_elbow': 'Left Elbow',
+        'angle_right_shoulder': 'Right Shoulder',
+        'angle_left_knee': 'Left Knee Shoulder',
+        'angle_right_knee': 'Right Knee Shoulder',
+        'angle_right_hip_knee': 'Right Hip to Left Hip',
+        'angle_left_hip_knee': 'Left Hip to Right Hip',
+        'angle_right_hip_shoulder': 'Right Hip to Shoulder',
+        'angle_right_shank': 'Right Shank',
+        'angle_left_shank': 'Left Shank'
+    }
+
+    if batsman_type == 'left-hand':
+        # Swap right with left for left-hand batsmen
+        angle_name = angle_name.replace('right_', 'temp_').replace('left_', 'right_').replace('temp_', 'left_')
+
+    return angle_name_mapping.get(angle_name, angle_name)

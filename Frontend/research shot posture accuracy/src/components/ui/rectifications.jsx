@@ -1,13 +1,18 @@
 import {
   Typography,
   Box,
-  CircularProgress
+  CircularProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper
 } from "@mui/material";
 
 // eslint-disable-next-line react/prop-types
 const Rectifications = ({ rectifications, accuracy, stroke }) => {
-
-  console.log(rectifications)
 
   return (
     <Box
@@ -16,7 +21,8 @@ const Rectifications = ({ rectifications, accuracy, stroke }) => {
         border: '1px solid #ddd',
         borderRadius: 2,
         boxShadow: 2,
-        maxWidth: 400
+        width: '100%',
+        boxSizing: 'border-box'
       }}
     >
       <Typography variant="h6" gutterBottom>
@@ -40,25 +46,45 @@ const Rectifications = ({ rectifications, accuracy, stroke }) => {
           </Typography>
         </Box>
       </Box>
-      {rectifications.map((rectification, index) => (
-        <Box key={index} sx={{ marginBottom: 2 }}>
-          <Typography variant="body1">
-            <strong>{rectification['angle name']}</strong>
-          </Typography>
-          <Typography variant="body2"><strong>{`${rectification['current angle value']}°`}</strong></Typography>
-          <Typography variant="body2" color="error">
-            <Typography variant="body2"><strong>{rectification['error type']}</strong></Typography>
-          </Typography>
-          <Typography variant="body2">
-            <Typography variant="body2"><strong>{rectification['general response']}</strong></Typography>
-          </Typography>
-          <Typography variant="body2">
-            <Typography variant="body2"><strong>{rectification['mathematical response']}</strong></Typography>
-          </Typography>
-        </Box>
-      ))}
+      <TableContainer component={Paper} sx={{ marginTop: 2 }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell><strong>Angle Name</strong></TableCell>
+              <TableCell><strong>Current Value</strong></TableCell>
+              <TableCell><strong>Acceptable Range</strong></TableCell>
+              <TableCell><strong>Error</strong></TableCell>
+              <TableCell><strong>Rectification</strong></TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {rectifications.map((rectification, index) => {
+              const backgroundColor = rectification['error type'] === 'large error'
+                ? '#f44336'
+                : '#ffa726';
+              return (
+                <TableRow key={index}>
+                  <TableCell sx={{ backgroundColor }}>{rectification['angle name']}</TableCell>
+                  <TableCell>{`${rectification['current angle value']}°`}</TableCell>
+                  <TableCell>{rectification['acceptable range']}</TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="error">
+                      <strong>{rectification['error description']}</strong>
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      <strong>{rectification['neighboring joints to change']}</strong>
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
     </Box>
   );
 };
 
-export default Rectifications
+export default Rectifications;

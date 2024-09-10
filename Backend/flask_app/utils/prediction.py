@@ -9,7 +9,7 @@ from angle_calculations.extract_angles import extract_angles
 clf = joblib.load(r'd:\\SLIIT\\Academic\\YEAR 04\\Research\\Training\\New-trainedModel\\random_forest_classification.pkl')
 
 # Load the MinMaxScaler
-scaler = joblib.load(r'D:\\SLIIT\\Academic\\YEAR 04\\Research\\ModelTraining\\New_scalers\\min_max_scaler.pkl')
+scaler = joblib.load(r'D:\\SLIIT\\Academic\\YEAR 04\\Research\\Training\\New_scalers\\min_max_scaler.pkl')
 
 def predict(features, image_np, batsman_type):
     try:

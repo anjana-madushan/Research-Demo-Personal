@@ -23,6 +23,7 @@ def calculate_accuracy_and_mae(shot_type, input_angles, closet_matches, batsman_
         raise ValueError("No valid deviation thresholds available")
 
     # Use the updated deviation thresholds in the calculation
+    print(deviation_thresholds)
     result = categorize_and_calculate_mae(input_angles, mean_values.to_dict(), deviation_thresholds, batsman_type)
 
     return result
@@ -43,27 +44,38 @@ def categorize_and_calculate_mae(input_angles, reference_angles, deviation_thres
         if angle in reference_angles:
             reference_value = reference_angles[angle]
             accurate_threshold, minor_error_threshold = deviation_thresholds.get(angle, (float('inf'), float('inf')))
-
+            print(minor_error_threshold)
             error = abs(input_value - reference_value)
 
-            if error <= minor_error_threshold and abs(input_value)<abs(accurate_threshold):
+            if error <= minor_error_threshold:
+                # Correct angle, no major error
                 correctness.append(100)
                 correct_angles.append(correct_angle_name)
                 print(correct_angles)
-            elif error >= minor_error_threshold and error < 2*minor_error_threshold:
+            else:
+                # Add the error (deviation) for both minor and major errors
                 absolute_deviations.append(error)
-                false_joints[angle] = input_value
-                rectification_needed[angle] = input_value
+                
+                if error < 2 * minor_error_threshold:
+                    # Minor error
+                    false_joints[angle] = input_value
+                    rectification_needed[angle] = input_value
+                else:
+                    # Major error
+                    incorrect_angles[angle] = input_value
+                    rectification_needed[angle] = input_value
+                
+                correctness.append(0)
                 total_error += error
                 count += 1
-            else:
-                incorrect_angles[angle] = input_value
-                rectification_needed[angle] = input_value
-                correctness.append(0)
 
+    # Calculate overall MAE using both minor and major errors
     overall_mae = sum(absolute_deviations) / len(absolute_deviations) if absolute_deviations else 0
-    mae_percentage = round(100 - overall_mae)  
+
+    # Calculate the accuracy as 100 minus the mean absolute error
+    mae_percentage = round(100 - overall_mae) if absolute_deviations else 100
     
+    # Generate rectification messages
     rectifications = generate_rectification_messages(
         rectification_needed.items(),
         reference_angles,
@@ -72,14 +84,14 @@ def categorize_and_calculate_mae(input_angles, reference_angles, deviation_thres
         input_angles
     )
 
+    # Prepare the result dictionary
     result = {
         'Accuracy': mae_percentage,
         'Rectification Messages': rectifications,
-        'Correct Angles': correct_angles 
+        'Correct Angles': correct_angles
     }
 
     return result
-
 
 def generate_rectification_messages(rectification_needed_items, reference_angles, deviation_thresholds, batsman_type, input_angles):
     rectifications = []
